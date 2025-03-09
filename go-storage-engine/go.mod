@@ -1,4 +1,4 @@
-module github.com/techninja8/getvault.io
+module github.com/getvault-mvp/vault-base
 
 go 1.23.6
 

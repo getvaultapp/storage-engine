@@ -12,9 +12,9 @@ import (
 	"github.com/urfave/cli/v2"
 	"go.uber.org/zap"
 
-	"github.com/techninja8/getvault.io/pkg/config"
-	"github.com/techninja8/getvault.io/pkg/datastorage"
-	"github.com/techninja8/getvault.io/pkg/sharding"
+	"github.com/getvault-mvp/vault-base/pkg/config"
+	"github.com/getvault-mvp/vault-base/pkg/datastorage"
+	"github.com/getvault-mvp/vault-base/pkg/sharding"
 )
 
 func main() {
