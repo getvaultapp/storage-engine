@@ -15,11 +15,11 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/techninja8/getvault.io/pkg/config"
-	"github.com/techninja8/getvault.io/pkg/encryption"
-	"github.com/techninja8/getvault.io/pkg/erasurecoding"
-	"github.com/techninja8/getvault.io/pkg/proofofinclusion"
-	"github.com/techninja8/getvault.io/pkg/sharding"
+	"github.com/getvault-mvp/vault-base/pkg/config"
+	"github.com/getvault-mvp/vault-base/pkg/encryption"
+	"github.com/getvault-mvp/vault-base/pkg/erasurecoding"
+	"github.com/getvault-mvp/vault-base/pkg/proofofinclusion"
+	"github.com/getvault-mvp/vault-base/pkg/sharding"
 )
 
 var (
