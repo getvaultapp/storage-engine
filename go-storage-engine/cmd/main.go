@@ -205,7 +205,7 @@ func main() {
 					return nil
 				},
 			},
-			{
+			/* {
 				Name:    "verify",
 				Aliases: []string{"v"},
 				Usage:   "Verify data availability using cryptographic proofs. Usage: verify <metadatafile>",
@@ -227,6 +227,32 @@ func main() {
 						return fmt.Errorf("failed to verify data after retries: %w", err)
 					}
 
+					return nil
+				},
+			}, */
+			{
+				Name:    "verify",
+				Aliases: []string{"v"},
+				Usage:   "Verify data availability using cryptographic proofs. Usage: verify <metadatafile>",
+				Action: func(c *cli.Context) error {
+					if c.NArg() < 1 {
+						return fmt.Errorf("please provide a metadata file")
+					}
+					metadataFile := c.Args().Get(0)
+
+					err := datastorage.Retry(3, 2*time.Second, logger, func() error {
+						if err := datastorage.VerifyShard(metadataFile, store, logger); err != nil {
+							return fmt.Errorf("verification failed: %w", err)
+						}
+						return nil
+					})
+					if err != nil {
+						return fmt.Errorf("failed to verify data after retries: %w", err)
+					}
+					/*if err := datastorage.VerifyShards(metadataFile, store, cfg, logger); err != nil {
+						return fmt.Errorf("verification failed: %w", err)
+					}*/
+					fmt.Println("Verification completed.")
 					return nil
 				},
 			},
