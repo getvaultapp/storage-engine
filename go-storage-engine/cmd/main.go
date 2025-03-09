@@ -241,7 +241,7 @@ func main() {
 					metadataFile := c.Args().Get(0)
 
 					err := datastorage.Retry(3, 2*time.Second, logger, func() error {
-						if err := datastorage.VerifyShard(metadataFile, store, logger); err != nil {
+						if err := datastorage.VerifyProofsFromFile(metadataFile, store); err != nil {
 							return fmt.Errorf("verification failed: %w", err)
 						}
 						return nil
