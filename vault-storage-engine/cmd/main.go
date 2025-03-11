@@ -235,13 +235,14 @@ func main() {
 				Aliases: []string{"v"},
 				Usage:   "Verify data availability using cryptographic proofs. Usage: verify <metadatafile>",
 				Action: func(c *cli.Context) error {
-					if c.NArg() < 1 {
+					if c.NArg() < 2 {
 						return fmt.Errorf("please provide a metadata file")
 					}
 					metadataFile := c.Args().Get(0)
+					shard_no := c.Args().Get(1)
 
 					err := datastorage.Retry(3, 2*time.Second, logger, func() error {
-						if err := datastorage.VerifyProofsFromFile(metadataFile, store); err != nil {
+						if err := datastorage.VerifyShard(metadataFile, shard_no, store); err != nil {
 							return fmt.Errorf("verification failed: %w", err)
 						}
 						return nil

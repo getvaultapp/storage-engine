@@ -211,7 +211,7 @@ func StoreData(data []byte, store sharding.ShardStore, cfg *config.Config, locat
 		if err != nil {
 			log.Fatal("failed to get proof for shard")
 		}
-		proof_of_shard := fmt.Sprintf("Proof for shard %d: %s\n", i, proof)
+		proof_of_shard := fmt.Sprintf("proof_shard_%d: %s\n", i, proof)
 		dataToAppend += "  " + proof_of_shard
 	}
 	dataToAppend += "}\n"
@@ -302,67 +302,83 @@ func RetrieveData(metadatafile string, store sharding.ShardStore, cfg *config.Co
 	return plainText, nil
 }
 
-// VerifyData verifies the data availability using cryptographic proofs.
-func VerifyData(metadatafile string, store sharding.ShardStore, logger *zap.Logger) error {
+func VerifyShard(metadatafile string, shard_no int, store sharding.ShardStore) error {
+	// OPEN METADATA FILE
+	// READ METADATA FILE
+	// ITERATE OVER PROOFS
+	// LET'S COMPARE PROOF FROM METADATA FROM PROOF OF RETRIEVED SHARDS
+
+	// Get shard proofs from metadata file
+	// Get shard locations from meetadat file, retrieve shards from locations
+	// Rebuild proof for each shard retrieved
+	// Compare each proof recomputed (postProof) to original shard proofs (preProof)
 	dataID, err := MetadataFileReader(metadatafile, "dataID")
 	if err != nil {
 		return fmt.Errorf("error reading metadata file: %w", err)
 	}
 
-	// Read storage locations from the metadata file
 	locations := make([]string, 14)
 	for i := 0; i < 14; i++ {
-		key := fmt.Sprintf("shard_%d", i)
-		location, err := MetadataFileReader(metadatafile, key)
+		shard_key := fmt.Sprintf("shard_%d", i)
+		location, err := MetadataFileReader(metadatafile, shard_key)
 		if err != nil {
-			return fmt.Errorf("error reading shard location from metadata file: %w", err)
+			return fmt.Errorf("failed to read metadata file, %w", err)
 		}
 		locations[i] = location
 	}
 
-	// Retrieve shards from the storage locations
 	shards := make([][]byte, len(locations))
 	for i, location := range locations {
 		shard, err := store.RetrieveShard(dataID, i, location)
 		if err != nil {
-			logger.Warn("Shard retrieval failed", zap.Int("index", i), zap.String("location", location), zap.Error(err))
+			//logger.Warn("Shard retrieval failed", zap.Int("index", i), zap.String("location", location), zap.Error(err))
+			fmt.Println("failed to retrieve shard")
 			continue
 		}
 		shards[i] = shard
 	}
 
-	// Build Merkle Tree
+	// Build merkle tree
 	tree, err := proofofinclusion.BuildMerkleTree(shards)
 	if err != nil {
-		return fmt.Errorf("failed to build Merkle tree: %w", err)
+		return fmt.Errorf("failed to build the merkle tree: %w", err)
 	}
 
-	// Read original proofs from metadata file
-	proofs := make([]string, 14)
-	for i := 0; i < 14; i++ {
-		key := fmt.Sprintf("Proof for shard %d", i)
-		proof, err := MetadataFileReader(metadatafile, key)
-		if err != nil {
-			return fmt.Errorf("failed to read proof from metadata file: %w", err)
+	postProof, err := proofofinclusion.GetProof(tree, shards[shard_no])
+	if err != nil {
+		return fmt.Errorf("failed to build merkle tree, %w", err)
+	}
+	//preProofs := make([]string, 14)
+	shard_at_point_n := fmt.Sprint("proof_of_%d", shard_no)
+	preProof, err := MetadataFileReader(metadatafile, shard_at_point_n)
+	if err != nil {
+		return fmt.Errorf("failed to read metadata file, %w", err)
+	}
+	fmt.Println(preProof)
+	fmt.Println(postProof)
+
+	/* for i, shard := range shards {
+		postProof, err := proofofinclusion.GetProof(tree, shard)
+
+		preProofs := make([]string, 14)
+		for i := 0; i < 14; i++ {
+			shard := fmt.Sprintf("proof_shard_%d", i)
+			preProof, err := MetadataFileReader(metadatafile, shard)
+			if err != nil {
+				return fmt.Errorf("failed to read metadata file, %w", err)
+			}
+			preProofs[i] = preProof
+			// fmt.Println(proof)
 		}
-		proofs[i] = proof
-	}
+		fmt.Println(postProof == preProofs[i])
 
-	// Generate and compare proof for each shard
-	for i, shard := range shards {
 		if shard == nil {
 			continue
 		}
-		proof, err := proofofinclusion.GetProof(tree, shard)
 		if err != nil {
-			return fmt.Errorf("failed to get proof for shard %d: %w", i, err)
+			return fmt.Errorf("failed to recompute proof for shard %d: %w", i, err)
 		}
-		isValid := proof == proofs[i]
-		fmt.Printf("Shard_%d Verification: %t\n", i, isValid)
-		if !isValid {
-			logger.Warn("Proof mismatch", zap.Int("shard", i), zap.String("expected", proofs[i]), zap.String("actual", proof))
-		}
-	}
+	} */
 
 	return nil
 }
