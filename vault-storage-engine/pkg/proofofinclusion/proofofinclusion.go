@@ -44,7 +44,7 @@ func BuildMerkleTree(shards [][]byte) (*merkletree.MerkleTree, error) {
 
 // GetProof generates a proof of inclusion for a given shard
 func GetProof(tree *merkletree.MerkleTree, shard []byte) (string, error) {
-	proof, err := tree.GetMerklePath(Content{X: hex.EncodeToString(shard)})
+	proof, _, err := tree.GetMerklePath(Content{X: hex.EncodeToString(shard)})
 	if err != nil {
 		return "", fmt.Errorf("failed to get Merkle proof: %w", err)
 	}
