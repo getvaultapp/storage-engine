@@ -1,47 +1,52 @@
 package erasurecoding
 
 import (
-	"bytes"
+	"fmt"
 
 	"github.com/klauspost/reedsolomon"
 )
 
-var (
-	DataShards   = 8
-	ParityShards = 6
+const (
+	DataShards   = 4
+	ParityShards = 2
 )
 
-// Encode splits and encodes the data into shards.
+// Encode encodes data using Reed-Solomon erasure coding
 func Encode(data []byte) ([][]byte, error) {
 	enc, err := reedsolomon.New(DataShards, ParityShards)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create encoder: %w", err)
 	}
+
 	shards, err := enc.Split(data)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to split data into shards: %w", err)
 	}
-	if err = enc.Encode(shards); err != nil {
-		return nil, err
+
+	err = enc.Encode(shards)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode data: %w", err)
 	}
+
 	return shards, nil
 }
 
-// Decode reconstructs the original data from shards.
+// Decode decodes data using Reed-Solomon erasure coding
 func Decode(shards [][]byte) ([]byte, error) {
 	enc, err := reedsolomon.New(DataShards, ParityShards)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create decoder: %w", err)
 	}
-	if err = enc.Reconstruct(shards); err != nil {
-		return nil, err
-	}
-	// Join shards back into a single byte slice.
-	var buf bytes.Buffer
-	if err = enc.Join(&buf, shards, len(shards[0])*DataShards); err != nil {
-		return nil, err
-	}
-	//return bytes.Trim(buf.Bytes(), "\x00"), nil
 
-	return buf.Bytes(), nil
+	err = enc.Reconstruct(shards)
+	if err != nil {
+		return nil, fmt.Errorf("failed to reconstruct data: %w", err)
+	}
+
+	data, err := enc.Join(nil, shards, len(shards[0])*DataShards)
+	if err != nil {
+		return nil, fmt.Errorf("failed to join shards: %w", err)
+	}
+
+	return data, nil
 }

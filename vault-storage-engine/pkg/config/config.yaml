@@ -1,0 +1,4 @@
+server_address: ":8080"
+shard_store_base_path: "/path/to/shard/store"
+encryption_key: "your-encryption-key"
+database: "vault_metadata.db"

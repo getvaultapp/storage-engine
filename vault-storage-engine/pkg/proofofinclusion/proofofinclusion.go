@@ -2,43 +2,52 @@ package proofofinclusion
 
 import (
 	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 
 	"github.com/cbergoon/merkletree"
 )
 
-// Content implements the merkletree.Content interface.
+// Content represents the content stored in the Merkle tree
 type Content struct {
-	data []byte
+	X string
 }
 
+// CalculateHash hashes the values of a Content
 func (c Content) CalculateHash() ([]byte, error) {
-	h := sha256.Sum256(c.data)
-	return h[:], nil
-}
-
-func (c Content) Equals(other merkletree.Content) (bool, error) {
-	return string(c.data) == string(other.(Content).data), nil
-}
-
-// BuildMerkleTree constructs a Merkle tree from the provided data slices.
-func BuildMerkleTree(dataSlices [][]byte) (*merkletree.MerkleTree, error) {
-	var list []merkletree.Content
-	for _, d := range dataSlices {
-		list = append(list, Content{data: d})
+	h := sha256.New()
+	if _, err := h.Write([]byte(c.X)); err != nil {
+		return nil, fmt.Errorf("failed to hash content: %w", err)
 	}
+	return h.Sum(nil), nil
+}
+
+// Equals tests for equality of two Contents
+func (c Content) Equals(other merkletree.Content) (bool, error) {
+	return c.X == other.(Content).X, nil
+}
+
+// BuildMerkleTree builds a Merkle tree from the given shards
+func BuildMerkleTree(shards [][]byte) (*merkletree.MerkleTree, error) {
+	var list []merkletree.Content
+	for _, shard := range shards {
+		list = append(list, Content{X: hex.EncodeToString(shard)})
+	}
+
 	tree, err := merkletree.NewTree(list)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create Merkle tree: %w", err)
 	}
+
 	return tree, nil
 }
 
-// GetProof returns a textual representation of the Merkle proof for a given content.
-func GetProof(tree *merkletree.MerkleTree, content []byte) (string, error) {
-	proof, indices, err := tree.GetMerklePath(Content{data: content})
+// GetProof generates a proof of inclusion for a given shard
+func GetProof(tree *merkletree.MerkleTree, shard []byte) (string, error) {
+	proof, err := tree.GetMerklePath(Content{X: hex.EncodeToString(shard)})
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to get Merkle proof: %w", err)
 	}
-	return fmt.Sprintf("proof: %v, indices: %v", proof, indices), nil
+
+	return hex.EncodeToString(proof[len(proof)-1]), nil // Corrected to retrieve the last element in the proof path
 }

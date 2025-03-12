@@ -2,48 +2,32 @@ package config
 
 import (
 	"log"
-	"time"
+	"os"
 
-	"github.com/spf13/viper"
+	"gopkg.in/yaml.v2"
 )
 
+// Config holds the configuration settings
 type Config struct {
-	EncryptionKey         string
-	DataShards            int
-	ParityShards          int
-	S3Endpoint            string
-	Bucket                string
-	MetricsInterval       time.Duration
-	ShardStorageLocations []string
+	ServerAddress      string `yaml:"server_address"`
+	ShardStoreBasePath string `yaml:"shard_store_base_path"`
+	EncryptionKey      string `yaml:"encryption_key"`
+	Database           string `yaml:"database"`
 }
 
+// LoadConfig loads the configuration from a YAML file
 func LoadConfig() *Config {
-	viper.AutomaticEnv()
-	// Set defaults
-	viper.SetDefault("DATA_SHARDS", 8)
-	viper.SetDefault("PARITY_SHARDS", 6)
-	viper.SetDefault("S3_ENDPOINT", "https://s3.amazonaws.com")
-	viper.SetDefault("BUCKET", "your-bucket")
-	viper.SetDefault("METRICS_INTERVAL", 10*time.Second)
-	viper.SetDefault("SHARD_STORAGE_LOCATIONS", []string{"/path/to/location1", "/path/to/location2"}) // Default storage locations
+	f, err := os.Open("config.yaml")
+	if err != nil {
+		log.Fatalf("failed to open config file: %v", err)
+	}
+	defer f.Close()
 
-	cfg := &Config{
-		EncryptionKey:         viper.GetString("ENCRYPTION_KEY"),
-		DataShards:            viper.GetInt("DATA_SHARDS"),
-		ParityShards:          viper.GetInt("PARITY_SHARDS"),
-		S3Endpoint:            viper.GetString("S3_ENDPOINT"),
-		Bucket:                viper.GetString("BUCKET"),
-		MetricsInterval:       viper.GetDuration("METRICS_INTERVAL"),
-		ShardStorageLocations: viper.GetStringSlice("SHARD_STORAGE_LOCATIONS"), // We'll use this to load storage locations
+	var cfg Config
+	decoder := yaml.NewDecoder(f)
+	if err := decoder.Decode(&cfg); err != nil {
+		log.Fatalf("failed to decode config file: %v", err)
 	}
 
-	if cfg.EncryptionKey == "" {
-		log.Fatal("ENCRYPTION_KEY must be set")
-	}
-
-	if len(cfg.ShardStorageLocations) == 0 {
-		log.Fatal("SHARD_STORAGE_LOCATIONS must be set")
-	}
-
-	return cfg
+	return &cfg
 }
