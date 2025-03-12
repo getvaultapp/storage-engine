@@ -27,14 +27,18 @@ func main() {
 			{
 				Name:    "store",
 				Aliases: []string{"s"},
-				Usage:   "Store data. Usage: store <filename_or_directory> <storage-location-configuration>",
-				Action:  storeCommand,
+				Usage:   "Store data. Usage: store <bucket_id> <file_path>",
+				Action: func(c *cli.Context) error {
+					return storeCommand(c, db, cfg, logger)
+				},
 			},
 			{
 				Name:    "retrieve",
 				Aliases: []string{"r"},
-				Usage:   "Retrieve Data From Metadata File. Usage: retrieve <metadatafile>",
-				Action:  retrieveCommand,
+				Usage:   "Retrieve data. Usage: retrieve <bucket_id> <object_id> <version_id>",
+				Action: func(c *cli.Context) error {
+					return retrieveCommand(c, db, cfg, logger)
+				},
 			},
 		},
 	}
