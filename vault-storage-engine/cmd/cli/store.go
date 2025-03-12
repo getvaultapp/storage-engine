@@ -1,6 +1,6 @@
 package main
 
-import (
+/* import (
 	"fmt"
 	"os"
 	"path/filepath"
@@ -36,3 +36,4 @@ func storeCommand(c *cli.Context, db *sql.DB, cfg *config.Config, logger *zap.Lo
 	fmt.Printf("Stored file as version %s in bucket %s\n", versionID, bucketID)
 	return nil
 }
+*/

@@ -1,6 +1,6 @@
 package main
 
-import (
+/* import (
 	"fmt"
 
 	"database/sql"
@@ -30,3 +30,4 @@ func retrieveCommand(c *cli.Context, db *sql.DB, cfg *config.Config, logger *zap
 	fmt.Printf("Retrieved data: %s\n", string(data))
 	return nil
 }
+*/

@@ -1,15 +1,63 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
+
+	"database/sql"
+	"path/filepath"
 
 	"github.com/getvault-mvp/vault-base/pkg/api"
 	"github.com/getvault-mvp/vault-base/pkg/bucket"
 	"github.com/getvault-mvp/vault-base/pkg/config"
+	"github.com/getvault-mvp/vault-base/pkg/datastorage"
+	"github.com/getvault-mvp/vault-base/pkg/sharding"
 	"github.com/urfave/cli/v2"
 	"go.uber.org/zap"
 )
+
+func storeCommand(c *cli.Context, db *sql.DB, cfg *config.Config, logger *zap.Logger) error {
+	if c.NArg() < 2 {
+		return fmt.Errorf("usage: store <bucket_id> <file_path>")
+	}
+
+	bucketID := c.Args().Get(0)
+	filePath := c.Args().Get(1)
+
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return fmt.Errorf("failed to read file: %w", err)
+	}
+
+	store := sharding.NewLocalShardStore(cfg.ShardStoreBasePath)
+	versionID, err := datastorage.StoreData(db, data, bucketID, filepath.Base(filePath), "uploaded_file", store, cfg, []string{}, logger)
+	if err != nil {
+		return fmt.Errorf("store failed: %w", err)
+	}
+
+	fmt.Printf("Stored file as version %s in bucket %s\n", versionID, bucketID)
+	return nil
+}
+
+func retrieveCommand(c *cli.Context, db *sql.DB, cfg *config.Config, logger *zap.Logger) error {
+	if c.NArg() < 3 {
+		return fmt.Errorf("usage: retrieve <bucket_id> <object_id> <version_id>")
+	}
+
+	bucketID := c.Args().Get(0)
+	objectID := c.Args().Get(1)
+	versionID := c.Args().Get(2)
+
+	store := sharding.NewLocalShardStore(cfg.ShardStoreBasePath)
+	data, err := datastorage.RetrieveData(db, bucketID, objectID, versionID, store, cfg, logger)
+	if err != nil {
+		return fmt.Errorf("retrieve failed: %w", err)
+	}
+
+	fmt.Printf("Retrieved data: %s\n", string(data))
+	return nil
+}
 
 func main() {
 	logger, _ := zap.NewProduction()
