@@ -2,7 +2,6 @@ package sharding
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 )
@@ -31,7 +30,7 @@ func (store *LocalShardStore) StoreShard(objectID string, shardIdx int, shard []
 		return fmt.Errorf("failed to create directory for shard: %w", err)
 	}
 
-	err = ioutil.WriteFile(shardPath, shard, 0644)
+	err = os.WriteFile(shardPath, shard, 0644)
 	if err != nil {
 		return fmt.Errorf("failed to write shard to file: %w", err)
 	}
@@ -41,7 +40,7 @@ func (store *LocalShardStore) StoreShard(objectID string, shardIdx int, shard []
 // RetrieveShard retrieves a shard locally
 func (store *LocalShardStore) RetrieveShard(objectID string, shardIdx int, location string) ([]byte, error) {
 	shardPath := filepath.Join(store.BasePath, location, fmt.Sprintf("%s_shard_%d", objectID, shardIdx))
-	shard, err := ioutil.ReadFile(shardPath)
+	shard, err := os.ReadFile(shardPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read shard from file: %w", err)
 	}

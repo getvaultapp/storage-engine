@@ -63,7 +63,17 @@ func main() {
 	logger, _ := zap.NewProduction()
 	defer logger.Sync()
 
-	cfg := config.LoadConfig()
+	cfg, err := config.LoadConfig()
+	if err != nil {
+		log.Fatalf("Failed to load config: %v", err)
+	}
+
+	var _, cipherErr = config.InitializeCipher(cfg.EncryptionKey)
+	if cipherErr != nil {
+		fmt.Println(cipherErr)
+	}
+
+	log.Println("Cipher and GCM created successfully!")
 
 	db, err := bucket.InitDB()
 	if err != nil {
