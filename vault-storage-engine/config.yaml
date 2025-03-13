@@ -1,4 +1,4 @@
 server_address: ":8080"
 shard_store_base_path: "/home/tnxl/vault-target"
-encryption_key: "bce8532f28220cee320911ef14c5a03d1e074e1cd03ce5c3696cb06ffe9ec7f10"
+encryption_key: "763c69b3d2d7819a2ddf4d754f5fd49820703a7388b8adb42735be94aa07efe7"
 database: "vault_metadata.db"
