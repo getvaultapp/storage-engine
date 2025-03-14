@@ -21,10 +21,7 @@ func StoreData(db *sql.DB, data []byte, bucketID, objectID, filePath string, sto
 	versionID := fmt.Sprintf("v%d", time.Now().Unix()) // Generate unique version ID
 
 	// Encrypt data
-	key, err := bucket.GetEncryptionKey(cfg)
-	if err != nil {
-		return "", fmt.Errorf("failed to get encryption key: %w", err)
-	}
+	key := cfg.EncryptionKey
 	cipherText, err := encryption.Encrypt(data, key)
 	if err != nil {
 		return "", fmt.Errorf("encryption failed: %w", err)
@@ -45,6 +42,11 @@ func StoreData(db *sql.DB, data []byte, bucketID, objectID, filePath string, sto
 	// Store shards
 	shardLocations := make(map[string]string)
 	for idx, shard := range shards {
+		// Add debugging statements
+		fmt.Printf("Storing shard %d, shard length: %d\n", idx, len(shard))
+		if idx >= len(locations) {
+			return "", fmt.Errorf("index out of range: idx=%d, locations length=%d", idx, len(locations))
+		}
 		location := locations[idx] // Use configured storage locations
 		err := store.StoreShard(objectID, idx, shard, location)
 		if err != nil {

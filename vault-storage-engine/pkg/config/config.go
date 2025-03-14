@@ -1,6 +1,7 @@
 package config
 
 import (
+	"encoding/hex"
 	"log"
 	"os"
 
@@ -11,7 +12,8 @@ import (
 type Config struct {
 	ServerAddress      string `yaml:"server_address"`
 	ShardStoreBasePath string `yaml:"shard_store_base_path"`
-	EncryptionKey      string `yaml:"encryption_key"`
+	EncryptionKey      []byte `yaml:"-"`
+	EncryptionKeyHex   string `yaml:"encryption_key"`
 	Database           string `yaml:"database"`
 }
 
@@ -29,10 +31,18 @@ func LoadConfig() *Config {
 		log.Fatalf("failed to decode config file: %v", err)
 	}
 
-	// Check if the EncryptionKey is not empty
-	if cfg.EncryptionKey == "" {
-		log.Fatal("encryption key not found in configuration")
+	// Decode the hex-encoded encryption key
+	key, err := hex.DecodeString(cfg.EncryptionKeyHex)
+	if err != nil {
+		log.Fatalf("failed to decode encryption key: %v", err)
 	}
+
+	// Ensure the key length is valid for AES (16, 24, or 32 bytes)
+	if len(key) != 16 && len(key) != 24 && len(key) != 32 {
+		log.Fatalf("invalid encryption key size: %d bytes", len(key))
+	}
+
+	cfg.EncryptionKey = key
 
 	return &cfg
 }

@@ -19,13 +19,28 @@ type VersionMetadata struct {
 	Proofs         []string          `json:"proofs"`
 }
 
-// AddObject inserts a new object
+// AddObject adds an object to the database if it doesn't already exist
 func AddObject(db *sql.DB, bucketID, objectID string) error {
-	query := `INSERT INTO objects (object_id, bucket_id) VALUES (?, ?)`
-	_, err := db.Exec(query, objectID, bucketID)
+	// Check if the object ID already exists
+	var exists bool
+	query := "SELECT EXISTS(SELECT 1 FROM objects WHERE object_id = ? AND bucket_id = ?)"
+	err := db.QueryRow(query, objectID, bucketID).Scan(&exists)
+	if err != nil {
+		return fmt.Errorf("failed to check if object exists: %w", err)
+	}
+
+	if exists {
+		// Object ID already exists, no need to add it again
+		return nil
+	}
+
+	// Object ID doesn't exist, proceed to add it
+	query = "INSERT INTO objects (bucket_id, object_id) VALUES (?, ?)"
+	_, err = db.Exec(query, bucketID, objectID)
 	if err != nil {
 		return fmt.Errorf("failed to add object: %w", err)
 	}
+
 	return nil
 }
 

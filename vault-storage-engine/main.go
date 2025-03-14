@@ -12,6 +12,7 @@ import (
 	"github.com/getvault-mvp/vault-base/pkg/config"
 	"github.com/getvault-mvp/vault-base/pkg/datastorage"
 	"github.com/getvault-mvp/vault-base/pkg/sharding"
+	"github.com/google/uuid"
 	"github.com/urfave/cli/v2"
 	"go.uber.org/zap"
 )
@@ -30,7 +31,10 @@ func storeCommand(c *cli.Context, db *sql.DB, cfg *config.Config, logger *zap.Lo
 	}
 
 	store := sharding.NewLocalShardStore(cfg.ShardStoreBasePath)
-	versionID, err := datastorage.StoreData(db, data, bucketID, filepath.Base(filePath), "uploaded_file", store, cfg, []string{}, logger)
+	// Initialize locations with enough entries
+	locations := []string{"location1", "location2", "location3", "location4", "location5", "location6", "location7", "location8"} // Example locations, ensure there are enough
+	objectID := uuid.New().String()                                                                                               // Generate a unique object ID
+	versionID, err := datastorage.StoreData(db, data, bucketID, objectID, filepath.Base(filePath), store, cfg, locations, logger)
 	if err != nil {
 		return fmt.Errorf("store failed: %w", err)
 	}
