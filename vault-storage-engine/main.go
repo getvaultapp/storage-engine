@@ -1,11 +1,10 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"log"
 	"os"
-
-	"database/sql"
 	"path/filepath"
 
 	"github.com/getvault-mvp/vault-base/pkg/api"
@@ -63,17 +62,7 @@ func main() {
 	logger, _ := zap.NewProduction()
 	defer logger.Sync()
 
-	cfg, err := config.LoadConfig()
-	if err != nil {
-		log.Fatalf("Failed to load config: %v", err)
-	}
-
-	var _, cipherErr = config.InitializeCipher(cfg.EncryptionKey)
-	if cipherErr != nil {
-		fmt.Println(cipherErr)
-	}
-
-	log.Println("Cipher and GCM created successfully!")
+	cfg := config.LoadConfig()
 
 	db, err := bucket.InitDB()
 	if err != nil {

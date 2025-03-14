@@ -23,7 +23,7 @@ func SetupRouter(db *sql.DB) *gin.Engine {
 	r := gin.Default()
 
 	// Initialize store, cfg, and logger
-	cfg, _ = config.LoadConfig()
+	cfg = config.LoadConfig()
 	store = sharding.NewLocalShardStore(cfg.ShardStoreBasePath)
 	logger, _ = zap.NewProduction()
 
