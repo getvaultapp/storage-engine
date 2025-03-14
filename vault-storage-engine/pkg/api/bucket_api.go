@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"net/http"
 
-	"github.com/getvault-mvp/vault-base/pkg/auth"
 	"github.com/getvault-mvp/vault-base/pkg/bucket"
 	"github.com/getvault-mvp/vault-base/pkg/config"
 	"github.com/getvault-mvp/vault-base/pkg/datastorage"
@@ -18,25 +17,6 @@ var (
 	cfg    *config.Config
 	logger *zap.Logger
 )
-
-func SetupRouter(db *sql.DB) *gin.Engine {
-	r := gin.Default()
-
-	// Initialize store, cfg, and logger
-	cfg = config.LoadConfig()
-	store = sharding.NewLocalShardStore(cfg.ShardStoreBasePath)
-	logger, _ = zap.NewProduction()
-
-	r.POST("/buckets", auth.JWTMiddleware(), auth.RBACMiddleware("owner"), func(c *gin.Context) { createBucketHandler(c, db) })
-	r.GET("/buckets/:bucket_id", auth.JWTMiddleware(), auth.RBACMiddleware("reader"), func(c *gin.Context) { getBucketHandler(c, db) })
-	r.POST("/buckets/:bucket_id/objects", auth.JWTMiddleware(), auth.RBACMiddleware("writer"), func(c *gin.Context) { uploadObjectHandler(c, db) })
-	r.GET("/buckets/:bucket_id/objects/:object_id", auth.JWTMiddleware(), auth.RBACMiddleware("reader"), func(c *gin.Context) { retrieveObjectHandler(c, db) })
-	r.GET("/buckets/:bucket_id/objects/:object_id/versions", auth.JWTMiddleware(), auth.RBACMiddleware("reader"), func(c *gin.Context) { listVersionsHandler(c, db) })
-	r.GET("/buckets/:bucket_id/objects/:object_id/versions/:version_id", auth.JWTMiddleware(), auth.RBACMiddleware("reader"), func(c *gin.Context) { retrieveVersionHandler(c, db) })
-	r.POST("/buckets/:bucket_id/permissions", auth.JWTMiddleware(), auth.RBACMiddleware("owner"), func(c *gin.Context) { setPermissionsHandler(c, db) })
-
-	return r
-}
 
 func createBucketHandler(c *gin.Context, db *sql.DB) {
 	var req struct {
@@ -87,7 +67,7 @@ func uploadObjectHandler(c *gin.Context, db *sql.DB) {
 	data := []byte(req.Data)
 
 	// Store data using Vault's storage system
-	versionID, err := datastorage.StoreData(db, data, bucketID, req.ObjectID, "uploaded_file", store, cfg, []string{}, logger)
+	versionID, _, _, err := datastorage.StoreData(db, data, bucketID, req.ObjectID, "uploaded_file", store, cfg, []string{}, logger)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to store object"})
 		return

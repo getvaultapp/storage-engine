@@ -2,13 +2,10 @@ package bucket
 
 import (
 	"database/sql"
-	"log"
 	"os"
 
 	_ "github.com/mattn/go-sqlite3"
 )
-
-const dbFile = "vault_metadata.db"
 
 // InitDB initializes the SQLite database
 // InitDB initializes the database if it doesn't exist and returns a connection to it.
@@ -21,9 +18,9 @@ func InitDB() (*sql.DB, error) {
 			return nil, err
 		}
 		file.Close()
-		log.Println("Database file created successfully.")
+		//log.Println("Database file created successfully.")
 	} else {
-		log.Println("Database file already exists.")
+		//log.Println("Database file already exists.")
 	}
 
 	db, err := sql.Open("sqlite3", dbPath)
@@ -36,7 +33,7 @@ func InitDB() (*sql.DB, error) {
 		return nil, err
 	}
 
-	log.Println("Database initialized successfully.")
+	//log.Println("Database initialized successfully.")
 	return db, nil
 }
 
@@ -50,12 +47,14 @@ func initializeSchema(db *sql.DB) error {
 	CREATE TABLE IF NOT EXISTS objects (
 		id TEXT PRIMARY KEY,
 		bucket_id TEXT NOT NULL,
-		data BLOB NOT NULL,
 		FOREIGN KEY (bucket_id) REFERENCES buckets(id)
 	);
 	CREATE TABLE IF NOT EXISTS versions (
 		id TEXT PRIMARY KEY,
 		object_id TEXT NOT NULL,
+		version_id TEXT NOT NULL,
+		bucket_id TEXT NOT NULL,
+		metadata TEXT NOT NULL,
 		data BLOB NOT NULL,
 		FOREIGN KEY (object_id) REFERENCES objects(id)
 	);

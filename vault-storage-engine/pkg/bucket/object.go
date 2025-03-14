@@ -13,10 +13,11 @@ type Object struct {
 	LatestVersion string
 }
 
-// VersionMetadata represents metadata for an object version
+// VersionMetadata represents the metadata for a version
 type VersionMetadata struct {
-	ShardLocations map[string]string `json:"shards"` // Maps node_id -> shard_hash
-	Proofs         []string          `json:"proofs"`
+	Data           []byte            `json:"data"`
+	ShardLocations map[string]string `json:"shard_locations"`
+	Proofs         map[string]string `json:"proofs"`
 }
 
 // AddObject adds an object to the database if it doesn't already exist
@@ -45,14 +46,36 @@ func AddObject(db *sql.DB, bucketID, objectID string) error {
 }
 
 // AddVersion inserts a new version for an object
+/* func AddVersion(db *sql.DB, bucketID, objectID, versionID string, metadata VersionMetadata) error {
+	metadataJSON, err := json.Marshal(metadata)
+	if err != nil {
+		return fmt.Errorf("failed to encode metadata: %w", err)
+	}
+
+	query := `INSERT INTO versions (version_id, object_id, bucket_id, data, metadata) VALUES (?, ?, ?, ?, ?)`
+	_, err = db.Exec(query, versionID, objectID, bucketID, metadata.Data, metadataJSON)
+	if err != nil {
+		return fmt.Errorf("failed to add version: %w", err)
+	}
+
+	// Update latest version for the object
+	_, err = db.Exec(`UPDATE objects SET latest_version = ? WHERE object_id = ?`, versionID, objectID)
+	if err != nil {
+		return fmt.Errorf("failed to update object latest version: %w", err)
+	}
+
+	return nil
+} */
+
+// AddVersion inserts a new version for an object
 func AddVersion(db *sql.DB, bucketID, objectID, versionID string, metadata VersionMetadata) error {
 	metadataJSON, err := json.Marshal(metadata)
 	if err != nil {
 		return fmt.Errorf("failed to encode metadata: %w", err)
 	}
 
-	query := `INSERT INTO versions (version_id, object_id, bucket_id, metadata) VALUES (?, ?, ?, ?)`
-	_, err = db.Exec(query, versionID, objectID, bucketID, metadataJSON)
+	query := `INSERT INTO versions (version_id, object_id, bucket_id, data, metadata) VALUES (?, ?, ?, ?, ?)`
+	_, err = db.Exec(query, versionID, objectID, bucketID, metadata.Data, metadataJSON)
 	if err != nil {
 		return fmt.Errorf("failed to add version: %w", err)
 	}
