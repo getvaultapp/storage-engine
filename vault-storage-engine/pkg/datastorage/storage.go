@@ -73,7 +73,7 @@ func StoreData(db *sql.DB, data []byte, bucketID, objectID, filePath string, sto
 		ShardLocations: shardLocations,
 		Proofs:         utils.ConvertSliceToMap(proofs),
 	}
-	err = bucket.AddVersion(db, bucketID, objectID, versionID, metadata)
+	err = bucket.AddVersion(db, bucketID, objectID, versionID, metadata, cipherText)
 	if err != nil {
 		return "", nil, nil, fmt.Errorf("failed to add version to database: %w", err)
 	}

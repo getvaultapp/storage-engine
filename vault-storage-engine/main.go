@@ -12,6 +12,7 @@ import (
 
 
 
+
 	"github.com/getvault-mvp/vault-base/pkg/bucket"
 	"github.com/getvault-mvp/vault-base/pkg/config"
 	"github.com/getvault-mvp/vault-base/pkg/datastorage"
@@ -200,7 +201,7 @@ func storeCommand(c *cli.Context, db *sql.DB, cfg *config.Config, logger *zap.Lo
 		ShardLocations: shardLocations,
 		Proofs:         proofsMap,
 	}
-	err = bucket.AddVersion(db, bucketID, objectID, versionID, metadata)
+	err = bucket.AddVersion(db, bucketID, objectID, versionID, metadata, data)
 	if err != nil {
 		return fmt.Errorf("store failed: %w", err)
 	}

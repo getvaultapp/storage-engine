@@ -24,7 +24,7 @@ type VersionMetadata struct {
 func AddObject(db *sql.DB, bucketID, objectID string) error {
 	// Check if the object ID already exists
 	var exists bool
-	query := "SELECT EXISTS(SELECT 1 FROM objects WHERE object_id = ? AND bucket_id = ?)"
+	query := "SELECT EXISTS(SELECT 1 FROM objects WHERE id = ? AND bucket_id = ?)"
 	err := db.QueryRow(query, objectID, bucketID).Scan(&exists)
 	if err != nil {
 		return fmt.Errorf("failed to check if object exists: %w", err)
@@ -36,8 +36,8 @@ func AddObject(db *sql.DB, bucketID, objectID string) error {
 	}
 
 	// Object ID doesn't exist, proceed to add it
-	query = "INSERT INTO objects (bucket_id, object_id) VALUES (?, ?)"
-	_, err = db.Exec(query, bucketID, objectID)
+	query = "INSERT INTO objects (id, bucket_id) VALUES (?, ?)"
+	_, err = db.Exec(query, objectID, bucketID)
 	if err != nil {
 		return fmt.Errorf("failed to add object: %w", err)
 	}
@@ -46,42 +46,20 @@ func AddObject(db *sql.DB, bucketID, objectID string) error {
 }
 
 // AddVersion inserts a new version for an object
-/* func AddVersion(db *sql.DB, bucketID, objectID, versionID string, metadata VersionMetadata) error {
+func AddVersion(db *sql.DB, bucketID, objectID, versionID string, metadata VersionMetadata, data []byte) error {
 	metadataJSON, err := json.Marshal(metadata)
 	if err != nil {
 		return fmt.Errorf("failed to encode metadata: %w", err)
 	}
 
-	query := `INSERT INTO versions (version_id, object_id, bucket_id, data, metadata) VALUES (?, ?, ?, ?, ?)`
-	_, err = db.Exec(query, versionID, objectID, bucketID, metadata.Data, metadataJSON)
+	query := `INSERT INTO versions (version_id, object_id, bucket_id, metadata, data) VALUES (?, ?, ?, ?, ?)`
+	_, err = db.Exec(query, versionID, objectID, bucketID, metadataJSON, data)
 	if err != nil {
 		return fmt.Errorf("failed to add version: %w", err)
 	}
 
 	// Update latest version for the object
-	_, err = db.Exec(`UPDATE objects SET latest_version = ? WHERE object_id = ?`, versionID, objectID)
-	if err != nil {
-		return fmt.Errorf("failed to update object latest version: %w", err)
-	}
-
-	return nil
-} */
-
-// AddVersion inserts a new version for an object
-func AddVersion(db *sql.DB, bucketID, objectID, versionID string, metadata VersionMetadata) error {
-	metadataJSON, err := json.Marshal(metadata)
-	if err != nil {
-		return fmt.Errorf("failed to encode metadata: %w", err)
-	}
-
-	query := `INSERT INTO versions (version_id, object_id, bucket_id, data, metadata) VALUES (?, ?, ?, ?, ?)`
-	_, err = db.Exec(query, versionID, objectID, bucketID, metadata.Data, metadataJSON)
-	if err != nil {
-		return fmt.Errorf("failed to add version: %w", err)
-	}
-
-	// Update latest version for the object
-	_, err = db.Exec(`UPDATE objects SET latest_version = ? WHERE object_id = ?`, versionID, objectID)
+	_, err = db.Exec(`UPDATE objects SET latest_version = ? WHERE id = ?`, versionID, objectID)
 	if err != nil {
 		return fmt.Errorf("failed to update object latest version: %w", err)
 	}
