@@ -10,6 +10,7 @@ import (
 type Object struct {
 	ID            string
 	BucketID      string
+	Filename      string
 	LatestVersion string
 }
 
@@ -21,7 +22,7 @@ type VersionMetadata struct {
 }
 
 // AddObject adds an object to the database if it doesn't already exist
-func AddObject(db *sql.DB, bucketID, objectID string) error {
+func AddObject(db *sql.DB, bucketID, objectID, filename string) error {
 	// Check if the object ID already exists
 	var exists bool
 	query := "SELECT EXISTS(SELECT 1 FROM objects WHERE id = ? AND bucket_id = ?)"
@@ -36,8 +37,8 @@ func AddObject(db *sql.DB, bucketID, objectID string) error {
 	}
 
 	// Object ID doesn't exist, proceed to add it
-	query = "INSERT INTO objects (id, bucket_id) VALUES (?, ?)"
-	_, err = db.Exec(query, objectID, bucketID)
+	query = "INSERT INTO objects (id, bucket_id, filename) VALUES (?, ?, ?)"
+	_, err = db.Exec(query, objectID, bucketID, filename)
 	if err != nil {
 		return fmt.Errorf("failed to add object: %w", err)
 	}

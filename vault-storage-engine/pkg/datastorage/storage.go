@@ -19,8 +19,7 @@ import (
 
 // StoreData stores an object inside a bucket
 func StoreData(db *sql.DB, data []byte, bucketID, objectID, filePath string, store sharding.ShardStore, cfg *config.Config, locations []string, logger *zap.Logger) (string, map[string]string, []string, error) {
-	//versionID := fmt.Sprintf("v%d", time.Now().Unix()) // Generate unique version ID
-
+	// Generate unique version ID
 	versionID := uuid.New().String()
 
 	// Encrypt data
@@ -45,7 +44,6 @@ func StoreData(db *sql.DB, data []byte, bucketID, objectID, filePath string, sto
 	// Store shards
 	shardLocations := make(map[string]string)
 	for idx, shard := range shards {
-		// Add debugging statements
 		fmt.Printf("Storing shard %d, shard length: %d\n", idx, len(shard))
 		if idx >= len(locations) {
 			return "", nil, nil, fmt.Errorf("index out of range: idx=%d, locations length=%d", idx, len(locations))
@@ -79,7 +77,7 @@ func StoreData(db *sql.DB, data []byte, bucketID, objectID, filePath string, sto
 	}
 
 	// Ensure object exists in the database
-	err = bucket.AddObject(db, bucketID, objectID)
+	err = bucket.AddObject(db, bucketID, objectID, filePath)
 	if err != nil {
 		return "", nil, nil, fmt.Errorf("failed to register object in bucket: %w", err)
 	}
@@ -89,11 +87,11 @@ func StoreData(db *sql.DB, data []byte, bucketID, objectID, filePath string, sto
 }
 
 // RetrieveData fetches an object from a bucket and reconstructs it
-func RetrieveData(db *sql.DB, bucketID, objectID, versionID string, store sharding.ShardStore, cfg *config.Config, logger *zap.Logger) ([]byte, error) {
+func RetrieveData(db *sql.DB, bucketID, objectID, versionID string, store sharding.ShardStore, cfg *config.Config, logger *zap.Logger) ([]byte, string, error) {
 	// Fetch metadata
 	metadata, err := bucket.GetObjectMetadata(db, objectID, versionID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to retrieve metadata: %w", err)
+		return nil, "", fmt.Errorf("failed to retrieve metadata: %w", err)
 	}
 
 	// Retrieve shards
@@ -120,24 +118,31 @@ func RetrieveData(db *sql.DB, bucketID, objectID, versionID string, store shardi
 
 	// Check if we have enough shards to reconstruct
 	if missing > erasurecoding.ParityShards {
-		return nil, fmt.Errorf("insufficient shards for reconstruction")
+		return nil, "", fmt.Errorf("insufficient shards for reconstruction")
 	}
 
 	// Reconstruct file
 	cipherText, err := erasurecoding.Decode(shards)
 	if err != nil {
-		return nil, fmt.Errorf("erasure decoding failed: %w", err)
+		return nil, "", fmt.Errorf("erasure decoding failed: %w", err)
 	}
 
 	// Decrypt file
 	key, err := bucket.GetEncryptionKey(cfg)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get encryption key: %w", err)
+		return nil, "", fmt.Errorf("failed to get encryption key: %w", err)
 	}
 	plainText, err := encryption.Decrypt(cipherText, key)
 	if err != nil {
-		return nil, fmt.Errorf("decryption failed: %w", err)
+		return nil, "", fmt.Errorf("decryption failed: %w", err)
 	}
 
-	return plainText, nil
+	// Fetch filename from the database
+	var filename string
+	err = db.QueryRow(`SELECT filename FROM objects WHERE id = ?`, objectID).Scan(&filename)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to retrieve filename: %w", err)
+	}
+
+	return plainText, filename, nil
 }
