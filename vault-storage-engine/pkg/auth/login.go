@@ -14,7 +14,7 @@ type User struct {
 	Role     string
 }
 
-// NOTE: This is a dummy user database (replace with actual DB in production)
+// Dummy user database (replace with actual DB in production)
 var users = map[string]User{
 	"user1": {ID: "1", Username: "user1", Password: "$2a$10$7e/7QJm5x7QJm5x7QJm5x7e/7QJm5x7QJm5x7QJm5x7e/7QJm5x7QJm5x", Role: "user"},
 	"admin": {ID: "2", Username: "admin", Password: "$2a$10$7e/7QJm5x7QJm5x7QJm5x7e/7QJm5x7QJm5x7QJm5x7e/7QJm5x7QJm5x", Role: "admin"},
