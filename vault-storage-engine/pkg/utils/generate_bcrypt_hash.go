@@ -1,16 +1,16 @@
 package utils
 
 import (
+	"log"
+
 	"golang.org/x/crypto/bcrypt"
 )
 
-func GetBcrypt(text string) (string, error) {
-	// Generate the bcrypt hash
-	hash, err := bcrypt.GenerateFromPassword([]byte(text), bcrypt.DefaultCost)
+// GetBcrypt generates a bcrypt hash of the given password
+func GetBcrypt(password string) string {
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
-		return "", err
+		log.Fatalf("Error generating bcrypt hash: %v", err)
 	}
-
-	// Print the hash
-	return string(hash), nil
+	return string(hash)
 }
