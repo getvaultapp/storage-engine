@@ -14,6 +14,18 @@ import (
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 	"github.com/getvault-mvp/vault-base/pkg/bucket"
 	"github.com/getvault-mvp/vault-base/pkg/config"
 	"github.com/getvault-mvp/vault-base/pkg/datastorage"
@@ -197,15 +209,24 @@ func storeCommand(c *cli.Context, db *sql.DB, cfg *config.Config, logger *zap.Lo
 		return fmt.Errorf("store failed: shardLocations or proofsMap cannot be empty")
 	}
 
-	// Save object metadata in SQLite
+	/* // Save object metadata in SQLite
 	metadata := bucket.VersionMetadata{
 		ShardLocations: shardLocations,
 		Proofs:         proofsMap,
 	}
-	err = bucket.AddVersion(db, bucketID, objectID, versionID, metadata, data)
+
+	root_version, _ := bucket.GetRootVersion(db, objectID) */
+
+	owner := "default_owner" // Replace with actual owner if available
+	err = bucket.CreateBucket(db, bucketID, owner)
+	if err != nil {
+		return fmt.Errorf("failed to create bucket: %w", err)
+	}
+
+	/* err = bucket.AddVersion(db, bucketID, objectID, versionID, root_version, metadata, data)
 	if err != nil {
 		return fmt.Errorf("store failed: %w", err)
-	}
+	} */
 
 	fmt.Printf("Stored file as version %s in bucket %s\n", versionID, bucketID)
 	return nil

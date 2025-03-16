@@ -10,7 +10,7 @@ import (
 // InitDB initializes the SQLite database
 // InitDB initializes the database if it doesn't exist and returns a connection to it.
 func InitDB() (*sql.DB, error) {
-	dbPath := "vault_metadata.db"
+	dbPath := "metadata.db"
 	if _, err := os.Stat(dbPath); os.IsNotExist(err) {
 		// Database file does not exist, create and initialize it
 		file, err := os.Create(dbPath)
@@ -42,6 +42,7 @@ func initializeSchema(db *sql.DB) error {
 	schema := `
 	CREATE TABLE IF NOT EXISTS buckets (
 		id TEXT PRIMARY KEY,
+		bucket_id NOT NULL,
 		owner TEXT NOT NULL
 	);
 	CREATE TABLE IF NOT EXISTS objects (
@@ -57,6 +58,7 @@ func initializeSchema(db *sql.DB) error {
 		version_id TEXT NOT NULL,
 		bucket_id TEXT NOT NULL,
 		metadata TEXT NOT NULL,
+		root_version TEXT NOT NULL,
 		data BLOB NOT NULL,
 		FOREIGN KEY (object_id) REFERENCES objects(id)
 	);
