@@ -1,6 +1,6 @@
 package api
 
-/* import (
+import (
 	"database/sql"
 	//"fmt"
 	"github.com/gin-gonic/gin"
@@ -43,7 +43,7 @@ func StoreObjectHandler(c *gin.Context, db *sql.DB, cfg *config.Config, logger *
 		"/mnt/disk8/shards",
 	}
 	objectID := uuid.New().String() // Generate a unique object ID
-	versionID, err := datastorage.StoreData(db, data, bucketID, objectID, "uploaded_file", store, cfg, locations, logger)
+	versionID, _, _, err := datastorage.StoreData(db, data, bucketID, objectID, "uploaded_file", store, cfg, locations, logger)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Store failed"})
 		return
@@ -51,4 +51,3 @@ func StoreObjectHandler(c *gin.Context, db *sql.DB, cfg *config.Config, logger *
 
 	c.JSON(http.StatusOK, gin.H{"version_id": versionID, "bucket_id": bucketID, "object_id": objectID})
 }
-*/

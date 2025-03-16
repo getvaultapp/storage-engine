@@ -8,7 +8,7 @@ import (
 	"log"
 )
 
-func main() {
+func KeyGen() {
 	// Define the key size flag
 	var keySize int
 	flag.IntVar(&keySize, "size", 32, "Size of the encryption key in bytes (must be 16, 24, or 32)")

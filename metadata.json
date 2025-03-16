@@ -1,0 +1,78 @@
+[
+  {
+    "data": null,
+    "shard_locations": {
+      "shard_0": "/mnt/disk1/shards",
+      "shard_1": "/mnt/disk2/shards",
+      "shard_2": "/mnt/disk3/shards",
+      "shard_3": "/mnt/disk4/shards",
+      "shard_4": "/mnt/disk5/shards",
+      "shard_5": "/mnt/disk6/shards"
+    },
+    "proofs": {
+      "key_0": "4469a56a1b6e55c56b28ce644fd65e34b5d9578a7b14e23a260d68156941ea30",
+      "key_1": "4469a56a1b6e55c56b28ce644fd65e34b5d9578a7b14e23a260d68156941ea30",
+      "key_2": "4469a56a1b6e55c56b28ce644fd65e34b5d9578a7b14e23a260d68156941ea30",
+      "key_3": "4469a56a1b6e55c56b28ce644fd65e34b5d9578a7b14e23a260d68156941ea30",
+      "key_4": "86a8ca6c77c36ad94823a20e05861f2ce81433a3b6715c50c539a737065f7771",
+      "key_5": "86a8ca6c77c36ad94823a20e05861f2ce81433a3b6715c50c539a737065f7771"
+    }
+  },
+  {
+    "data": null,
+    "shard_locations": {
+      "shard_0": "/mnt/disk1/shards",
+      "shard_1": "/mnt/disk2/shards",
+      "shard_2": "/mnt/disk3/shards",
+      "shard_3": "/mnt/disk4/shards",
+      "shard_4": "/mnt/disk5/shards",
+      "shard_5": "/mnt/disk6/shards"
+    },
+    "proofs": {
+      "key_0": "e3c345db03c937762bbeb71f1e8946065a8383a7a8f2fc467215b2f231c94d76",
+      "key_1": "e3c345db03c937762bbeb71f1e8946065a8383a7a8f2fc467215b2f231c94d76",
+      "key_2": "e3c345db03c937762bbeb71f1e8946065a8383a7a8f2fc467215b2f231c94d76",
+      "key_3": "e3c345db03c937762bbeb71f1e8946065a8383a7a8f2fc467215b2f231c94d76",
+      "key_4": "6417bf0393ca9d4b3e007b6348f844631ee8f786027b333700e71858fbb36a41",
+      "key_5": "6417bf0393ca9d4b3e007b6348f844631ee8f786027b333700e71858fbb36a41"
+    }
+  },
+  {
+    "data": null,
+    "shard_locations": {
+      "shard_0": "/mnt/disk1/shards",
+      "shard_1": "/mnt/disk2/shards",
+      "shard_2": "/mnt/disk3/shards",
+      "shard_3": "/mnt/disk4/shards",
+      "shard_4": "/mnt/disk5/shards",
+      "shard_5": "/mnt/disk6/shards"
+    },
+    "proofs": {
+      "key_0": "c67566a1bdf407eade51e5e41147d4d5fc03c6874ec9bbc0be312719ad655819",
+      "key_1": "c67566a1bdf407eade51e5e41147d4d5fc03c6874ec9bbc0be312719ad655819",
+      "key_2": "c67566a1bdf407eade51e5e41147d4d5fc03c6874ec9bbc0be312719ad655819",
+      "key_3": "c67566a1bdf407eade51e5e41147d4d5fc03c6874ec9bbc0be312719ad655819",
+      "key_4": "f54e0e7a81ec5d36442e1988fd319aa9e0c7c654ed3f1117e2800e220f8ff151",
+      "key_5": "f54e0e7a81ec5d36442e1988fd319aa9e0c7c654ed3f1117e2800e220f8ff151"
+    }
+  },
+  {
+    "data": null,
+    "shard_locations": {
+      "shard_0": "/mnt/disk1/shards",
+      "shard_1": "/mnt/disk2/shards",
+      "shard_2": "/mnt/disk3/shards",
+      "shard_3": "/mnt/disk4/shards",
+      "shard_4": "/mnt/disk5/shards",
+      "shard_5": "/mnt/disk6/shards"
+    },
+    "proofs": {
+      "key_0": "01fcf7607edd971fb1547ef50bf2e38b61c3785e7fcd0f493314b5990d03b690",
+      "key_1": "01fcf7607edd971fb1547ef50bf2e38b61c3785e7fcd0f493314b5990d03b690",
+      "key_2": "01fcf7607edd971fb1547ef50bf2e38b61c3785e7fcd0f493314b5990d03b690",
+      "key_3": "01fcf7607edd971fb1547ef50bf2e38b61c3785e7fcd0f493314b5990d03b690",
+      "key_4": "d4dc7343fbd6bc97ad4da0a56d3af54fe9d28dfe7435836f3360badf067843e6",
+      "key_5": "d4dc7343fbd6bc97ad4da0a56d3af54fe9d28dfe7435836f3360badf067843e6"
+    }
+  }
+]

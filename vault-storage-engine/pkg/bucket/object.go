@@ -149,7 +149,14 @@ func AddVersion(db *sql.DB, bucketID, objectID, versionID, rootVersion string, m
 		return fmt.Errorf("failed to add version: %w", err)
 	}
 
-	_, err = db.Exec(`UPDATE objects SET latest_version = ? WHERE id = ?`, versionID, objectID)
+	/* _, err = db.Exec(`UPDATE objects SET latest_version = ? WHERE id = ?`, versionID, objectID)
+	if err != nil {
+		return fmt.Errorf("failed to update object latest version: %w", err)
+	} */
+
+	// Update the latest version for the object
+	updateQuery := `UPDATE objects SET latest_version = ? WHERE id = ?`
+	_, err = db.Exec(updateQuery, versionID, objectID)
 	if err != nil {
 		return fmt.Errorf("failed to update object latest version: %w", err)
 	}
