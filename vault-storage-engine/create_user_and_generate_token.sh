@@ -2,7 +2,7 @@
 
 # Replace these values with the actual username and password
 USERNAME="user1"
-PASSWORD="password" # This is the plain text password
+PASSWORD="my_password" # This is the plain text password
 
 # URL of the server
 SERVER_URL="http://localhost:8080"

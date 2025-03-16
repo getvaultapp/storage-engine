@@ -5,7 +5,7 @@ import (
 
 	"log"
 
-	//"github.com/getvault-mvp/vault-base/pkg/utils"
+	"github.com/getvault-mvp/vault-base/pkg/utils"
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -17,12 +17,12 @@ type User struct {
 	Role     string
 }
 
-//var password string = "password"
+var password string = "my_password"
 
 // Dummy user database (replace with actual DB in production)
 var users = map[string]User{
-	"user1": {ID: "1", Username: "user1", Password: "$2a$10$JAP.gOeW0DirGIxkPWZtDegiJR5HY0FyTgHGxtp7y0OgxeAa3equC", Role: "user"},
-	"admin": {ID: "2", Username: "admin", Password: "$2a$10$JAP.gOeW0DirGIxkPWZtDegiJR5HY0FyTgHGxtp7y0OgxeAa3equC", Role: "admin"},
+	"user1": {ID: "1", Username: "user1", Password: utils.GetBcrypt(password), Role: "user"},
+	"admin": {ID: "2", Username: "admin", Password: utils.GetBcrypt(password), Role: "admin"},
 }
 
 // LoginHandler handles user login and generates a JWT token
@@ -42,10 +42,6 @@ func LoginHandler(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
 		return
 	}
-
-	// Debug statements
-	log.Printf("Stored hash for user %s: %s", user.Username, user.Password)
-	log.Printf("Password being compared: %s", loginData.Password)
 
 	err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(loginData.Password))
 	if err != nil {
