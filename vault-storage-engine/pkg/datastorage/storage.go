@@ -68,6 +68,8 @@ func StoreData(db *sql.DB, data []byte, bucketID, objectID, filePath string, sto
 
 	// Save object metadata in SQLite
 	metadata := bucket.VersionMetadata{
+		Filename:       bucket.GetFileName(db),
+		Filesize:       bucket.GetFileSize(),
 		ShardLocations: shardLocations,
 		Proofs:         utils.ConvertSliceToMap(proofs),
 	}

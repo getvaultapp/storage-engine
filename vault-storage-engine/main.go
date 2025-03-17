@@ -105,6 +105,22 @@ func retrieveCommand(c *cli.Context, db *sql.DB, cfg *config.Config, logger *zap
 	return nil
 }
 
+func listAllBuckets(db *sql.DB) error {
+	// Read the buckets from metadata.db
+	// Get the buckets from the buckets table, under bucket_id
+
+	/* query := "SELECT buckets_id FROM buckets = ?"
+	row := db.QueryRow(bucket_id)
+	_, err := db.Exec(query)
+	if err != nil {
+		return fmt.Errorf("failed to read bucket_id, %w", err)
+	}
+
+	return nil */
+
+	return nil
+}
+
 func main() {
 	logger, _ := zap.NewProduction()
 	defer logger.Sync()
@@ -134,6 +150,19 @@ func main() {
 				Usage:   "Retrieve data. Usage: retrieve <bucket_id> <object_id> <version_id>",
 				Action: func(c *cli.Context) error {
 					return retrieveCommand(c, db, cfg, logger)
+				},
+			},
+			{
+				Name:  "read-metadata",
+				Usage: "List all currently active buckets",
+				Action: func(ctx *cli.Context) error {
+					return bucket.ReadMetadataJson("metadata.json")
+				},
+			},
+			{
+				Name: "list-buckets",
+				Action: func(ctx *cli.Context) error {
+					return listAllBuckets(db)
 				},
 			},
 		},
