@@ -108,13 +108,6 @@ func GetFileName(db *sql.DB) string {
 		}
 		return "failed at row sacnning"
 	}
-
-	var metadata VersionMetadata
-	err = json.Unmarshal([]byte(filename), &metadata)
-	if err != nil {
-		return "failed at unmarshal"
-	}
-
 	return filename
 }
 

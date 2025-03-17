@@ -39,6 +39,5 @@ func SetupRouter(db *sql.DB) *gin.Engine {
 	r.POST("/buckets/:bucket_id/permissions", auth.JWTMiddleware(), auth.RBACMiddleware("owner"), func(c *gin.Context) {
 		setPermissionsHandler(c, db)
 	})
-
 	return r
 }
