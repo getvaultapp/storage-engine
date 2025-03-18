@@ -25,14 +25,28 @@ type VersionMetadata struct {
 
 // AddObject adds an object to the database if it doesn't already exist
 func AddObject(db *sql.DB, bucketID, objectID, filename string) error {
-	var exists bool
+	// var bucketExists bool
+
+	/* // Check if the Bucket exists
+	query := "SELECT EXISTS(SELECT 1 FROM buckets WHERE bucket_id = ?)"
+	err := db.QueryRow(query, bucketID).Scan(&bucketExists)
+	if err != nil {
+		return fmt.Errorf("failed to check if bucket exists, %w", err)
+	}
+
+	if bucketExists {
+		fmt.Printf("%s exists\n", bucketID)
+		return nil
+	} */
+
+	var objectExists bool
 	query := "SELECT EXISTS(SELECT 1 FROM objects WHERE id = ? AND bucket_id = ?)"
-	err := db.QueryRow(query, objectID, bucketID).Scan(&exists)
+	err := db.QueryRow(query, objectID, bucketID).Scan(&objectExists)
 	if err != nil {
 		return fmt.Errorf("failed to check if object exists: %w", err)
 	}
 
-	if exists {
+	if objectExists {
 		return nil
 	}
 
@@ -47,6 +61,19 @@ func AddObject(db *sql.DB, bucketID, objectID, filename string) error {
 
 // AddVersion inserts a new version for an object
 func AddVersion(db *sql.DB, bucketID, objectID, versionID, rootVersion string, metadata VersionMetadata, data []byte) error {
+	/* var bucketExists bool
+
+	// Check if the Bucket exists
+	query := "SELECT EXISTS(SELECT 1 FROM buckets WHERE bucket_id = ?)"
+	err := db.QueryRow(query, bucketID).Scan(&bucketExists)
+	if err != nil {
+		return fmt.Errorf("failed to check if bucket exists, %w", err)
+	}
+
+	if !bucketExists {
+		return fmt.Errorf("bucket %s does not exists", bucketID)
+	} */
+
 	metadataJSON, err := json.Marshal(metadata)
 	if err != nil {
 		return fmt.Errorf("failed to encode metadata: %w", err)
@@ -58,10 +85,10 @@ func AddVersion(db *sql.DB, bucketID, objectID, versionID, rootVersion string, m
 		return fmt.Errorf("failed to add version: %w", err)
 	}
 
-	/* _, err = db.Exec(`UPDATE objects SET latest_version = ? WHERE id = ?`, versionID, objectID)
+	_, err = db.Exec(`UPDATE objects SET latest_version = ? WHERE id = ?`, versionID, objectID)
 	if err != nil {
 		return fmt.Errorf("failed to update object latest version: %w", err)
-	} */
+	}
 
 	// Update the latest version for the object
 	updateQuery := `UPDATE objects SET latest_version = ? WHERE id = ?`

@@ -44,6 +44,7 @@ package bucket
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 )
@@ -57,8 +58,22 @@ type Bucket struct {
 
 // CreateBucket inserts a new bucket into the database
 func CreateBucket(db *sql.DB, bucketID string, owner string) error {
-	query := `INSERT INTO buckets (bucket_id, owner) VALUES (?, "")`
-	_, err := db.Exec(query, bucketID, owner)
+	var bucketExists bool
+
+	// Check if the Bucket exists
+	query := "SELECT EXISTS(SELECT 1 FROM buckets WHERE bucket_id = ?)"
+	err := db.QueryRow(query, bucketID).Scan(&bucketExists)
+	if err != nil {
+		return fmt.Errorf("failed to check if bucket exists, %w", err)
+	}
+
+	if bucketExists {
+		fmt.Printf("%s exists\n", bucketID)
+		return errors.New("bucket exists")
+	}
+
+	query = `INSERT INTO buckets (bucket_id, owner) VALUES (?, "")`
+	_, err = db.Exec(query, bucketID, owner)
 	if err != nil {
 		return fmt.Errorf("failed to create bucket: %w", err)
 	}

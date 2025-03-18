@@ -7,6 +7,9 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+func AuthMiddleware(secretKey string) gin.HandlerFunc {
+	return nil
+}
 func LoginHandler(c *gin.Context) {
 	var req struct {
 		UserID string `json:"user_id"`

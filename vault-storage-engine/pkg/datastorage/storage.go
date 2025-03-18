@@ -19,6 +19,20 @@ import (
 
 // StoreData stores an object inside a bucket
 func StoreData(db *sql.DB, data []byte, bucketID, objectID, filePath string, store sharding.ShardStore, cfg *config.Config, locations []string, logger *zap.Logger) (string, map[string]string, []string, error) {
+	// First check if the bucket exists
+	var bucketExists bool
+
+	// Check if the Bucket exists
+	query := "SELECT EXISTS(SELECT 1 FROM buckets WHERE bucket_id = ?)"
+	err := db.QueryRow(query, bucketID).Scan(&bucketExists)
+	if err != nil {
+		return "", nil, nil, fmt.Errorf("failed to check if bucket exists, %w", err)
+	}
+
+	if !bucketExists {
+		return "", nil, nil, fmt.Errorf("bucket %s does not exists", bucketID)
+	}
+
 	// Generate unique version ID
 	versionID := uuid.New().String()
 

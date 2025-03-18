@@ -1,6 +1,6 @@
 package api
 
-import (
+/* import (
 	"database/sql"
 
 	"github.com/getvault-mvp/vault-base/pkg/auth"
@@ -19,25 +19,25 @@ func SetupRouter(db *sql.DB) *gin.Engine {
 	logger, _ = zap.NewProduction()
 
 	r.POST("/buckets", auth.JWTMiddleware(), auth.RBACMiddleware("owner"), func(c *gin.Context) {
-		createBucketHandler(c, db)
+		CreateBucketHandler(c, db)
 	})
 	r.GET("/buckets/:bucket_id", auth.JWTMiddleware(), auth.RBACMiddleware("reader"), func(c *gin.Context) {
-		getBucketHandler(c, db)
+		GetBucketHandler(c, db)
 	})
 	r.POST("/buckets/:bucket_id/objects", auth.JWTMiddleware(), auth.RBACMiddleware("writer"), func(c *gin.Context) {
-		uploadObjectHandler(c, db)
+		UploadObjectHandler(c, db)
 	})
 	r.GET("/buckets/:bucket_id/objects/:object_id", auth.JWTMiddleware(), auth.RBACMiddleware("reader"), func(c *gin.Context) {
-		retrieveObjectHandler(c, db)
+		RetrieveObjectHandler(c, db)
 	})
 	r.GET("/buckets/:bucket_id/objects/:object_id/versions", auth.JWTMiddleware(), auth.RBACMiddleware("reader"), func(c *gin.Context) {
-		listVersionsHandler(c, db)
+		ListVersionsHandler(c, db)
 	})
 	r.GET("/buckets/:bucket_id/objects/:object_id/versions/:version_id", auth.JWTMiddleware(), auth.RBACMiddleware("reader"), func(c *gin.Context) {
-		retrieveVersionHandler(c, db)
+		RetrieveVersionHandler(c, db)
 	})
 	r.POST("/buckets/:bucket_id/permissions", auth.JWTMiddleware(), auth.RBACMiddleware("owner"), func(c *gin.Context) {
-		setPermissionsHandler(c, db)
+		SetBucketPermissionsHandler(c, db)
 	})
 	return r
-}
+} */
