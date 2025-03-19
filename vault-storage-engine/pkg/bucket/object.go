@@ -18,8 +18,13 @@ type Object struct {
 
 // VersionMetadata represents the metadata for a version
 type VersionMetadata struct {
+	BucketID       string            `json:"bucket_id"`
+	ObjectID       string            `json:"object_id"`
+	VersionID      string            `json:"file_version"`
 	Filename       string            `json:"filename"`
 	Filesize       string            `json:"filesize"`
+	Format         string            `json:"file_formart"`
+	CreationDate   string            `json:"creation_date"`
 	Data           []byte            `json:"data"`
 	ShardLocations map[string]string `json:"shard_locations"`
 	Proofs         map[string]string `json:"proofs"`
@@ -48,7 +53,6 @@ func AddObject(db *sql.DB, bucketID, objectID, filename string) error {
 
 	var filenameExists bool
 	query = "SELECT EXISTS(SELECT filename FROM objects WHERE id = ? AND bucket_id = ? AND filename = ?)"
-	fmt.Println(query)
 	err = db.QueryRow(query, objectID, bucketID, filename).Scan(&filenameExists)
 	if err != nil {
 		return fmt.Errorf("failed to object update version: %w", err)
@@ -126,21 +130,6 @@ func GetObjectMetadata(db *sql.DB, objectID, versionID string) (*VersionMetadata
 	return &metadata, nil
 }
 
-func GetFileName(db *sql.DB) string {
-	query := `SELECT filename FROM objects`
-	row := db.QueryRow(query)
-
-	var filename string
-	err := row.Scan(&filename)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return "failed at ErrNoRows"
-		}
-		return "failed at row sacnning"
-	}
-	return filename
-}
-
 func GetRootVersion(db *sql.DB, objectID string) (string, error) {
 	// Do nothing yet
 	var rootVersion string
@@ -152,10 +141,4 @@ func GetRootVersion(db *sql.DB, objectID string) (string, error) {
 		rootVersion = "initial_version"
 	}
 	return rootVersion, nil
-}
-
-func GetFileSize() string {
-	var filesize string
-
-	return filesize
 }

@@ -57,12 +57,12 @@ func storeCommand(c *cli.Context, db *sql.DB, cfg *config.Config, logger *zap.Lo
 	}
 
 	// Save object metadata in SQLite
-	metadata := bucket.VersionMetadata{
+	/* metadata := bucket.VersionMetadata{
 		ShardLocations: shardLocations,
 		Proofs:         proofsMap,
-	}
+	} */
 
-	root_version, _ := bucket.GetRootVersion(db, objectID)
+	//root_version, _ := bucket.GetRootVersion(db, objectID)
 
 	owner := "default_owner" // Replace with actual owner if available
 	err = bucket.CreateBucket(db, bucketID, owner)
@@ -70,11 +70,19 @@ func storeCommand(c *cli.Context, db *sql.DB, cfg *config.Config, logger *zap.Lo
 		return fmt.Errorf("failed to create bucket: %w", err)
 	}
 
-	err = bucket.AddVersion(db, bucketID, objectID, versionID, root_version, metadata, data)
+	/* err = bucket.AddVersion(db, bucketID, objectID, versionID, root_version, metadata, data)
 	if err != nil {
 		return fmt.Errorf("store failed: %w", err)
 	}
+	*/
+	/* err = datastorage.Retry(3, 2*time.Second, logger, func() error {
+		versionID, shardLocations, proofs, err := datastorage.StoreData(db, data, bucketID, objectID, filepath.Base(filePath), store, cfg, locations, logger)
+		if err != nil {
+			return fmt.Errorf("attempts exausted, failed to store data")
+		}
 
+		return nil
+	}) */
 	fmt.Printf("Stored file as version %s in bucket %s\n", versionID, bucketID)
 	return nil
 }

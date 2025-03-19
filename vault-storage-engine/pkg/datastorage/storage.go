@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/getvault-mvp/vault-base/pkg/bucket"
 	"github.com/getvault-mvp/vault-base/pkg/config"
@@ -83,8 +84,13 @@ func StoreData(db *sql.DB, data []byte, bucketID, objectID, filePath string, sto
 
 	// Save object metadata in SQLite
 	metadata := bucket.VersionMetadata{
+		BucketID:       bucketID,
+		ObjectID:       objectID,
+		VersionID:      versionID,
 		Filename:       filepath.Base(filePath),
-		Filesize:       bucket.GetFileSize(),
+		Filesize:       "",
+		Format:         strings.TrimPrefix(filepath.Ext(filePath), "."),
+		CreationDate:   time.Now().Format(time.RFC3339),
 		ShardLocations: shardLocations,
 		Proofs:         utils.ConvertSliceToMap(proofs),
 	}
