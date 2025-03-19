@@ -12,7 +12,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func RetrieveCommand(c *cli.Context, db *sql.DB, cfg *config.Config, logger *zap.Logger) error {
+func retrieveCommand(c *cli.Context, db *sql.DB, cfg *config.Config, logger *zap.Logger) error {
 	if c.NArg() < 3 {
 		return fmt.Errorf("usage: retrieve <bucket_id> <object_id> <version_id>")
 	}

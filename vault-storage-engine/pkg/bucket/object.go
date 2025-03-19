@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+
+	"github.com/google/uuid"
 )
 
 // Object represents a stored file
@@ -25,28 +27,42 @@ type VersionMetadata struct {
 
 // AddObject adds an object to the database if it doesn't already exist
 func AddObject(db *sql.DB, bucketID, objectID, filename string) error {
-	// var bucketExists bool
-
-	/* // Check if the Bucket exists
-	query := "SELECT EXISTS(SELECT 1 FROM buckets WHERE bucket_id = ?)"
-	err := db.QueryRow(query, bucketID).Scan(&bucketExists)
-	if err != nil {
-		return fmt.Errorf("failed to check if bucket exists, %w", err)
-	}
-
-	if bucketExists {
-		fmt.Printf("%s exists\n", bucketID)
-		return nil
-	} */
-
 	var objectExists bool
-	query := "SELECT EXISTS(SELECT 1 FROM objects WHERE id = ? AND bucket_id = ?)"
-	err := db.QueryRow(query, objectID, bucketID).Scan(&objectExists)
+	query := "SELECT EXISTS(SELECT 1 FROM objects WHERE id = ? AND bucket_id = ? AND filename = ?)"
+	err := db.QueryRow(query, objectID, bucketID, filename).Scan(&objectExists)
 	if err != nil {
 		return fmt.Errorf("failed to check if object exists: %w", err)
 	}
 
 	if objectExists {
+		//err := updateObjectVersion(db, objectID, bucketID)
+		versionID := uuid.New()
+		query := "UPDATE objects SET latest_version = ? WHERE id = ? AND bucket_id = ? AND filename = ?"
+		_, err = db.Exec(query, versionID, objectID, bucketID, filename)
+		if err != nil {
+			return fmt.Errorf("failed to update object version, %s", err)
+		}
+
+		return nil
+	}
+
+	var filenameExists bool
+	query = "SELECT EXISTS(SELECT filename FROM objects WHERE id = ? AND bucket_id = ? AND filename = ?)"
+	fmt.Println(query)
+	err = db.QueryRow(query, objectID, bucketID, filename).Scan(&filenameExists)
+	if err != nil {
+		return fmt.Errorf("failed to object update version: %w", err)
+	}
+
+	if filenameExists {
+		//err := updateObjectVersion(db, objectID, bucketID)
+		versionID := uuid.New()
+		query := "UPDATE objects SET latest_version = ? WHERE id = ? AND bucket_id = ? AND filename = ?"
+		_, err = db.Exec(query, versionID, objectID, bucketID, filename)
+		if err != nil {
+			return fmt.Errorf("failed to update object version, %s", err)
+		}
+
 		return nil
 	}
 
@@ -61,19 +77,6 @@ func AddObject(db *sql.DB, bucketID, objectID, filename string) error {
 
 // AddVersion inserts a new version for an object
 func AddVersion(db *sql.DB, bucketID, objectID, versionID, rootVersion string, metadata VersionMetadata, data []byte) error {
-	/* var bucketExists bool
-
-	// Check if the Bucket exists
-	query := "SELECT EXISTS(SELECT 1 FROM buckets WHERE bucket_id = ?)"
-	err := db.QueryRow(query, bucketID).Scan(&bucketExists)
-	if err != nil {
-		return fmt.Errorf("failed to check if bucket exists, %w", err)
-	}
-
-	if !bucketExists {
-		return fmt.Errorf("bucket %s does not exists", bucketID)
-	} */
-
 	metadataJSON, err := json.Marshal(metadata)
 	if err != nil {
 		return fmt.Errorf("failed to encode metadata: %w", err)

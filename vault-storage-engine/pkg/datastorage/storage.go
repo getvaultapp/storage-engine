@@ -3,6 +3,7 @@ package datastorage
 import (
 	"database/sql"
 	"fmt"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -82,7 +83,7 @@ func StoreData(db *sql.DB, data []byte, bucketID, objectID, filePath string, sto
 
 	// Save object metadata in SQLite
 	metadata := bucket.VersionMetadata{
-		Filename:       bucket.GetFileName(db),
+		Filename:       filepath.Base(filePath),
 		Filesize:       bucket.GetFileSize(),
 		ShardLocations: shardLocations,
 		Proofs:         utils.ConvertSliceToMap(proofs),
@@ -94,8 +95,9 @@ func StoreData(db *sql.DB, data []byte, bucketID, objectID, filePath string, sto
 		return "", nil, nil, fmt.Errorf("failed to add version to database: %w", err)
 	}
 
+	filename := filepath.Base(filePath)
 	// Ensure object exists in the database
-	err = bucket.AddObject(db, bucketID, objectID, filePath)
+	err = bucket.AddObject(db, bucketID, objectID, filename)
 	if err != nil {
 		return "", nil, nil, fmt.Errorf("failed to register object in bucket: %w", err)
 	}

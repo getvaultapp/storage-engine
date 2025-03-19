@@ -44,7 +44,7 @@ func RunCli() {
 				Name:  "get-object",
 				Usage: "Retrieves a valid object from it's bucket. Usage: retrieve <bucket_id> <object_id> <version_id>",
 				Action: func(c *cli.Context) error {
-					return RetrieveCommand(c, db, cfg, logger)
+					return retrieveCommand(c, db, cfg, logger)
 				},
 			},
 			{
@@ -55,9 +55,10 @@ func RunCli() {
 				},
 			},
 			{
-				Name: "list-buckets",
-				Action: func(ctx *cli.Context) error {
-					return ListAllBuckets()
+				Name:  "list-buckets",
+				Usage: "Lists all active buckets",
+				Action: func(c *cli.Context) error {
+					return listBucketCommand(c, db, cfg, logger)
 				},
 			},
 		},
