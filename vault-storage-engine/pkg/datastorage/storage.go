@@ -1,8 +1,11 @@
 package datastorage
 
 import (
+	"bytes"
+	"compress/gzip"
 	"database/sql"
 	"fmt"
+	"io"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -38,9 +41,21 @@ func StoreData(db *sql.DB, data []byte, bucketID, objectID, filePath string, sto
 	// Generate unique version ID
 	versionID := uuid.New().String()
 
-	// Encrypt data
+	// Compress data
+	var compressedBuffer bytes.Buffer
+	gzipWriter := gzip.NewWriter(&compressedBuffer)
+	_, compressErr := gzipWriter.Write(data)
+	if compressErr != nil {
+		return "", nil, nil, fmt.Errorf("failed to compress data, %w", err)
+	}
+	if gzipErr := gzipWriter.Close(); gzipErr != nil {
+		return "", nil, nil, fmt.Errorf("failed to close gzip writer, %w", err)
+	}
+	compressedData := compressedBuffer.Bytes()
+
+	// Encrypt compressed data
 	key := cfg.EncryptionKey
-	cipherText, err := encryption.Encrypt(data, key)
+	cipherText, err := encryption.Encrypt(compressedData, key)
 	if err != nil {
 		return "", nil, nil, fmt.Errorf("encryption failed: %w", err)
 	}
@@ -158,10 +173,27 @@ func RetrieveData(db *sql.DB, bucketID, objectID, versionID string, store shardi
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to get encryption key: %w", err)
 	}
-	plainText, err := encryption.Decrypt(cipherText, key)
+	compressedData, err := encryption.Decrypt(cipherText, key)
 	if err != nil {
 		return nil, "", fmt.Errorf("decryption failed: %w", err)
 	}
+
+	// Decompressed Data
+	gzipReader, readErr := gzip.NewReader(bytes.NewReader(compressedData))
+	if readErr != nil {
+		return nil, "", fmt.Errorf("failed to create gzip reader, %w", readErr)
+	}
+	defer gzipReader.Close()
+
+	var decompressedBuffer bytes.Buffer
+	_, err = io.Copy(&decompressedBuffer, gzipReader)
+	if err != nil {
+		if err == io.ErrUnexpectedEOF {
+			return nil, "", fmt.Errorf("unexpected EOF when decompressing data, %w", err)
+		}
+		return nil, "", fmt.Errorf("failed to decompress data, %w", err)
+	}
+	plainText := decompressedBuffer.Bytes()
 
 	// Fetch filename from the database
 	var filename string

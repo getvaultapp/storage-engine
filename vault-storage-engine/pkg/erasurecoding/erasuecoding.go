@@ -42,7 +42,7 @@ func Decode(shards [][]byte) ([]byte, error) {
 		return nil, err
 	}
 
-	//return buf.Bytes(), nil
+	return buf.Bytes(), nil
 
-	return bytes.Trim(buf.Bytes(), "\x00"), nil
+	//return bytes.Trim(buf.Bytes(), "\x00"), nil
 }

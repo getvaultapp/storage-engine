@@ -1,13 +1,9 @@
 package main
 
-import (
-	"net/http"
-
-	"github.com/gin-gonic/gin"
-)
+import "github.com/getvaultapp/vault-storage-engine/cmd/vault_cli"
 
 func main() {
-	r := gin.Default()
+	/* r := gin.Default()
 	r.LoadHTMLFiles("index.html")
 	r.GET("/", func(ctx *gin.Context) {
 		ctx.HTML(http.StatusOK, "index.html", gin.H{
@@ -15,5 +11,7 @@ func main() {
 		})
 	})
 
-	r.Run(":8080") // This should listen and serve on this address
+	r.Run(":8080") // This should listen and serve on this address */
+
+	vault_cli.RunCli()
 }
