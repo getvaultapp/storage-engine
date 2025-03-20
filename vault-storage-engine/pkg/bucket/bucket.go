@@ -28,11 +28,12 @@ func CreateBucket(db *sql.DB, bucketID string, owner string) error {
 		return nil
 	}
 
-	query = `INSERT INTO buckets (bucket_id, owner) VALUES (?, "")`
+	query = `INSERT INTO buckets (bucket_id, owner) VALUES (?, ?)`
 	_, err = db.Exec(query, bucketID, owner)
 	if err != nil {
 		return fmt.Errorf("failed to create bucket: %w", err)
 	}
+
 	return nil
 }
 
