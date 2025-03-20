@@ -51,7 +51,7 @@ func RunCli() {
 				Name:  "read-metadata-json",
 				Usage: "Returns metadata.json for objects",
 				Action: func(c *cli.Context) error {
-					return bucket.ReadMetadataJson("metadata.json")
+					return readMetadataJsonCommand(c, db)
 				},
 			},
 			{

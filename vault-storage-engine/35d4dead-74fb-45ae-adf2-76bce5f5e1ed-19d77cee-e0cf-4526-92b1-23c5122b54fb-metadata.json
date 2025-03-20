@@ -1,0 +1,26 @@
+{
+ "bucket_id": "new-bucket",
+ "object_id": "35d4dead-74fb-45ae-adf2-76bce5f5e1ed",
+ "file_version": "19d77cee-e0cf-4526-92b1-23c5122b54fb",
+ "filename": "file.txt",
+ "filesize": "",
+ "file_formart": "txt",
+ "creation_date": "2025-03-20T19:16:37+01:00",
+ "data": null,
+ "shard_locations": {
+  "shard_0": "/mnt/disk1/shards",
+  "shard_1": "/mnt/disk2/shards",
+  "shard_2": "/mnt/disk3/shards",
+  "shard_3": "/mnt/disk4/shards",
+  "shard_4": "/mnt/disk5/shards",
+  "shard_5": "/mnt/disk6/shards"
+ },
+ "proofs": {
+  "key_0": "be8d746cd9084ef2cf433d6dec01c01b5cfe2f938bac00f7f6f0fa0ca6364662",
+  "key_1": "be8d746cd9084ef2cf433d6dec01c01b5cfe2f938bac00f7f6f0fa0ca6364662",
+  "key_2": "be8d746cd9084ef2cf433d6dec01c01b5cfe2f938bac00f7f6f0fa0ca6364662",
+  "key_3": "be8d746cd9084ef2cf433d6dec01c01b5cfe2f938bac00f7f6f0fa0ca6364662",
+  "key_4": "ceabdbae438c2aef0700e61fc4396bb8448fdc0800eab55bbac26768b8cd6116",
+  "key_5": "ceabdbae438c2aef0700e61fc4396bb8448fdc0800eab55bbac26768b8cd6116"
+ }
+}

@@ -10,7 +10,7 @@ import (
 
 func newBucketCommand(c *cli.Context, db *sql.DB) error {
 	if c.NArg() != 2 {
-		return fmt.Errorf("usage: retrieve <bucket_id> <owner_id>")
+		return fmt.Errorf("usage: create-bucket <bucket_id> <owner_id>")
 	}
 
 	bucketID := c.Args().Get(0)

@@ -7,47 +7,44 @@ import (
 	"os"
 )
 
-func ReadMetadataJson(filename string) error {
+func ReadMetadataJson(bucketID, objectID, versionID string, filename string) error {
 	db, err := sql.Open("sqlite3", "./metadata.db")
 	if err != nil {
 		return fmt.Errorf("failed to open metadata database, %w", err)
 	}
 	defer db.Close()
 
-	rows, err := db.Query("SELECT metadata FROM versions")
+	query := `SELECT metadata FROM versions WHERE bucket_id = ? AND object_id = ? AND version_id = ?`
+	rows, err := db.Query(query, bucketID, objectID, versionID)
 	if err != nil {
-		return fmt.Errorf("failed to read table versions, %w", err)
+		return fmt.Errorf("failed to get versionID and objectID, %w", err)
 	}
-
-	var allMetadata []VersionMetadata
 
 	for rows.Next() {
 		var metadataJSON string
-		err := rows.Scan(&metadataJSON)
+		err = rows.Scan(&metadataJSON)
 		if err != nil {
-			return fmt.Errorf("operation failed, %w", err)
+			if err == sql.ErrNoRows {
+				return fmt.Errorf("no metadata found for object %s version (%s) in %s", objectID, versionID, bucketID)
+			}
+			return fmt.Errorf("failed to read metadata file: %w", err)
 		}
 
 		var metadata VersionMetadata
 		err = json.Unmarshal([]byte(metadataJSON), &metadata)
 		if err != nil {
-			return fmt.Errorf("operation failed, %w", err)
+			return fmt.Errorf("failed to unmarshal metadata file: %w", err)
 		}
 
-		allMetadata = append(allMetadata, metadata)
-	}
+		outputJSON, err := json.MarshalIndent(metadata, "", " ")
+		if err != nil {
+			return fmt.Errorf("failed to read metadata: %w", err)
+		}
 
-	if err = rows.Err(); err != nil {
-		return fmt.Errorf("error during row iteration: %w", err)
-	}
-
-	outputJSON, err := json.MarshalIndent(allMetadata, "", " ")
-	if err != nil {
-		return fmt.Errorf("failed to marshal metadata to JSON: %w", err)
-	}
-	err = os.WriteFile(filename, outputJSON, 0644)
-	if err != nil {
-		return fmt.Errorf("failed to write json to file, %w", err)
+		err = os.WriteFile(filename, outputJSON, 0644)
+		if err != nil {
+			return fmt.Errorf("failed to write json to file, %w", err)
+		}
 
 	}
 	return nil
