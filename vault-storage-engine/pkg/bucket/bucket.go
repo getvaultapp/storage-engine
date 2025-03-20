@@ -76,3 +76,46 @@ func ListAllBuckets(db *sql.DB) ([]string, error) {
 
 	return bucketIDs, nil
 }
+
+// Returns all the objects in a bucket
+func GetObjectsInBucket(db *sql.DB, bucketID string) ([]string, error) {
+	query := "SELECT id FROM objects WHERE bucket_id = ?"
+	rows, err := db.Query(query, bucketID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve objects in bucket, %w", err)
+	}
+	defer rows.Close()
+
+	var objectIDs []string
+	for rows.Next() {
+		var objectID string
+		err := rows.Scan(&objectID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan object ID: %w", err)
+		}
+		objectIDs = append(objectIDs, objectID)
+	}
+	return objectIDs, nil
+}
+
+// Deletes all the contents of a bucket
+func DeleteBucket(db *sql.DB, bucketID string) error {
+	objects, err := GetObjectsInBucket(db, bucketID)
+	if err != nil {
+		return fmt.Errorf("failed to get objects in bucket, %w", err)
+	}
+	for _, objectID := range objects {
+		err := DeleteObject(db, bucketID, objectID)
+		if err != nil {
+			return fmt.Errorf("failed to delete object, %w", err)
+		}
+	}
+
+	// Remove bucket from database
+	query := "DELETE FROM buckets WHERE bucket_id = ?"
+	_, err = db.Exec(query, bucketID)
+	if err != nil {
+		return fmt.Errorf("failed to delete bucket, %w", err)
+	}
+	return nil
+}

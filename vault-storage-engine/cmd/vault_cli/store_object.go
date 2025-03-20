@@ -18,7 +18,7 @@ import (
 
 func storeCommand(c *cli.Context, db *sql.DB, cfg *config.Config, logger *zap.Logger) error {
 	if c.NArg() < 2 {
-		return fmt.Errorf("usage: store <bucket_id> <file_path>")
+		return fmt.Errorf("usage: store-object <bucket_id> <file_path>")
 	}
 
 	bucketID := c.Args().Get(0)

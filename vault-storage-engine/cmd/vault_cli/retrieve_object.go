@@ -14,7 +14,7 @@ import (
 
 func retrieveCommand(c *cli.Context, db *sql.DB, cfg *config.Config, logger *zap.Logger) error {
 	if c.NArg() < 3 {
-		return fmt.Errorf("usage: retrieve <bucket_id> <object_id> <version_id>")
+		return fmt.Errorf("usage: get-object <bucket_id> <object_id> <version_id>")
 	}
 
 	bucketID := c.Args().Get(0)
@@ -33,6 +33,6 @@ func retrieveCommand(c *cli.Context, db *sql.DB, cfg *config.Config, logger *zap
 		return fmt.Errorf("failed to write retrieved data to file: %w", err)
 	}
 
-	fmt.Printf("Retrieved data and stored it in file: %s\n", filename)
+	fmt.Printf("Retrieved %s into file, %s\n", objectID, filename)
 	return nil
 }

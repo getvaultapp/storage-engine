@@ -10,6 +10,7 @@ import (
 type ShardStore interface {
 	StoreShard(objectID string, shardIdx int, shard []byte, location string) error
 	RetrieveShard(objectID string, shardIdx int, location string) ([]byte, error)
+	DeleteShard(objectID string, shardIdx int, location string) error
 }
 
 // LocalShardStore is a local implementation of ShardStore
@@ -45,4 +46,22 @@ func (store *LocalShardStore) RetrieveShard(objectID string, shardIdx int, locat
 		return nil, fmt.Errorf("failed to read shard from file: %w", err)
 	}
 	return shard, nil
+}
+
+// Delete shards from their locations
+func (store *LocalShardStore) DeleteShard(objectID string, shardIdx int, location string) error {
+	if location == "" {
+		return fmt.Errorf("invalid storage location")
+	}
+	shardPath := filepath.Join(store.BasePath, location, fmt.Sprintf("%s_shard_%d", objectID, shardIdx))
+
+	err := os.Remove(shardPath)
+	if err != nil {
+		// Let's check if the shard does not exists
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return fmt.Errorf("failed to delete shard file, %w", err)
+	}
+	return nil
 }

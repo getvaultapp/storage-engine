@@ -142,3 +142,20 @@ func GetRootVersion(db *sql.DB, objectID string) (string, error) {
 	}
 	return rootVersion, nil
 }
+
+func DeleteObject(db *sql.DB, bucketID, objectID string) error {
+	// Remove the object versions
+	query := "DELETE FROM versions WHERE object_id = ?"
+	_, err := db.Exec(query, objectID)
+	if err != nil {
+		return fmt.Errorf("failed to delete object versions: %w", err)
+	}
+
+	// Remove the objects
+	query = "DELETE FROM objects WHERE id = ?"
+	_, err = db.Exec(query, objectID)
+	if err != nil {
+		return fmt.Errorf("failed to delete the object, %w", err)
+	}
+	return nil
+}

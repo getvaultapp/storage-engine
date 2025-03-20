@@ -35,14 +35,14 @@ func RunCli() {
 			},
 			{
 				Name:  "store-object",
-				Usage: "Store objects in valid buckets. Usage: store <bucket_id> <file_path>",
+				Usage: "Store objects in valid buckets. Usage: store-object <bucket_id> <file_path>",
 				Action: func(c *cli.Context) error {
 					return storeCommand(c, db, cfg, logger)
 				},
 			},
 			{
 				Name:  "get-object",
-				Usage: "Retrieves a valid object from it's bucket. Usage: retrieve <bucket_id> <object_id> <version_id>",
+				Usage: "Retrieves a valid object from it's bucket. Usage: get-object <bucket_id> <object_id> <version_id>",
 				Action: func(c *cli.Context) error {
 					return retrieveCommand(c, db, cfg, logger)
 				},
@@ -50,7 +50,7 @@ func RunCli() {
 			{
 				Name:  "read-metadata-json",
 				Usage: "Returns metadata.json for objects",
-				Action: func(ctx *cli.Context) error {
+				Action: func(c *cli.Context) error {
 					return bucket.ReadMetadataJson("metadata.json")
 				},
 			},
@@ -59,6 +59,20 @@ func RunCli() {
 				Usage: "Lists all active buckets",
 				Action: func(c *cli.Context) error {
 					return listBucketCommand(c, db, cfg, logger)
+				},
+			},
+			{
+				Name:  "delete-object",
+				Usage: "Deletes an object. Usage: delete-object <bucket_id> <object_id> <version_id>",
+				Action: func(c *cli.Context) error {
+					return deleteObject(c, db, cfg, logger)
+				},
+			},
+			{
+				Name:  "delete-bucket",
+				Usage: "Deletes an entire bucket including all it's objects and their respective versions. Usage: delete-bucket <bucket-id>",
+				Action: func(c *cli.Context) error {
+					return deleteBucket(c, db, cfg, logger)
 				},
 			},
 		},
