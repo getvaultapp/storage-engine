@@ -6,7 +6,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-// Secret key (should be stored securely)
+// I need to get a jwtSecret key
 var jwtSecret = []byte("super_secret_key")
 
 // GenerateJWT creates a JWT for a user

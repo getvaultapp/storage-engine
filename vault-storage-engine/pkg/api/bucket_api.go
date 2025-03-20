@@ -48,5 +48,3 @@ func GetBucketHandler(c *gin.Context, db *sql.DB) {
 
 	c.JSON(http.StatusOK, bucketData)
 }
-
-// Handles permissions related to the buckets
