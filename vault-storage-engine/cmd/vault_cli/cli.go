@@ -4,8 +4,8 @@ import (
 	"log"
 	"os"
 
-	"github.com/getvault-mvp/vault-base/pkg/bucket"
-	"github.com/getvault-mvp/vault-base/pkg/config"
+	"github.com/getvaultapp/vault-storage-engine/pkg/bucket"
+	"github.com/getvaultapp/vault-storage-engine/pkg/config"
 	"github.com/urfave/cli/v2"
 	"go.uber.org/zap"
 )

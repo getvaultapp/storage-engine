@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"net/http"
 
-	"github.com/getvault-mvp/vault-base/pkg/acl"
+	"github.com/getvaultapp/vault-storage-engine/pkg/acl"
 	"github.com/gin-gonic/gin"
 )
 

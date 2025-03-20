@@ -1,4 +1,4 @@
-module github.com/getvault-mvp/vault-base
+module github.com/getvaultapp/vault-storage-engine
 
 go 1.23.6
 

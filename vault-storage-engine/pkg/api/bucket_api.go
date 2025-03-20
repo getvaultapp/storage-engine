@@ -4,9 +4,9 @@ import (
 	"database/sql"
 	"net/http"
 
-	"github.com/getvault-mvp/vault-base/pkg/bucket"
-	"github.com/getvault-mvp/vault-base/pkg/config"
-	"github.com/getvault-mvp/vault-base/pkg/sharding"
+	"github.com/getvaultapp/vault-storage-engine/pkg/bucket"
+	"github.com/getvaultapp/vault-storage-engine/pkg/config"
+	"github.com/getvaultapp/vault-storage-engine/pkg/sharding"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )
