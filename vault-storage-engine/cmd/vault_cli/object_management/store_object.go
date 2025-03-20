@@ -1,4 +1,4 @@
-package vault_cli
+package object_cli
 
 import (
 	"database/sql"
@@ -16,7 +16,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func storeCommand(c *cli.Context, db *sql.DB, cfg *config.Config, logger *zap.Logger) error {
+func StoreCommand(c *cli.Context, db *sql.DB, cfg *config.Config, logger *zap.Logger) error {
 	if c.NArg() < 2 {
 		return fmt.Errorf("usage: store-object <bucket_id> <file_path>")
 	}

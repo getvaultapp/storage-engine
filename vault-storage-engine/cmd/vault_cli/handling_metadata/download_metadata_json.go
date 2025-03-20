@@ -1,4 +1,4 @@
-package vault_cli
+package metadata_cli
 
 import (
 	"database/sql"
@@ -8,7 +8,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-func readMetadataJsonCommand(c *cli.Context, db *sql.DB) error {
+func ReadMetadataJsonCommand(c *cli.Context, db *sql.DB) error {
 	if c.NArg() != 3 {
 		return fmt.Errorf("usage: read-metadata-json <bucket_id> <object_id> <version_id>")
 	}

@@ -1,4 +1,4 @@
-package vault_cli
+package bucket_cli
 
 import (
 	"database/sql"
@@ -8,7 +8,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-func newBucketCommand(c *cli.Context, db *sql.DB) error {
+func NewBucketCommand(c *cli.Context, db *sql.DB) error {
 	if c.NArg() != 2 {
 		return fmt.Errorf("usage: create-bucket <bucket_id> <owner_id>")
 	}

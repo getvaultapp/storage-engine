@@ -1,4 +1,4 @@
-package vault_cli
+package bucket_cli
 
 import (
 	"database/sql"
@@ -10,7 +10,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func listBucketCommand(c *cli.Context, db *sql.DB, cfg *config.Config, logger *zap.Logger) error {
+func ListBucketCommand(c *cli.Context, db *sql.DB, cfg *config.Config, logger *zap.Logger) error {
 	_, err := bucket.ListAllBuckets(db)
 
 	if err != nil {

@@ -1,4 +1,4 @@
-package vault_cli
+package object_cli
 
 import (
 	"database/sql"
@@ -11,7 +11,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func deleteObject(c *cli.Context, db *sql.DB, cfg *config.Config, logger *zap.Logger) error {
+func DeleteObject(c *cli.Context, db *sql.DB, cfg *config.Config, logger *zap.Logger) error {
 	if c.NArg() < 3 {
 		return fmt.Errorf("usage: delete-object <bucket_id> <object_id> <version_id>")
 	}

@@ -1,6 +1,6 @@
 package main
 
-import "github.com/getvaultapp/vault-storage-engine/cmd/vault_cli"
+import vault_cli "github.com/getvaultapp/vault-storage-engine/run_cli/cli_cmd"
 
 func main() {
 	/* r := gin.Default()

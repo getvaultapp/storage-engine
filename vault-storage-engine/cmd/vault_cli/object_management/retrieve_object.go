@@ -1,4 +1,4 @@
-package vault_cli
+package object_cli
 
 import (
 	"database/sql"
@@ -12,7 +12,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func retrieveCommand(c *cli.Context, db *sql.DB, cfg *config.Config, logger *zap.Logger) error {
+func RetrieveCommand(c *cli.Context, db *sql.DB, cfg *config.Config, logger *zap.Logger) error {
 	if c.NArg() < 3 {
 		return fmt.Errorf("usage: get-object <bucket_id> <object_id> <version_id>")
 	}

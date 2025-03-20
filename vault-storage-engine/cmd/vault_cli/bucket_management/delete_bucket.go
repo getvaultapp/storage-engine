@@ -1,4 +1,4 @@
-package vault_cli
+package bucket_cli
 
 import (
 	"database/sql"
@@ -11,7 +11,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func deleteBucket(c *cli.Context, db *sql.DB, cfg *config.Config, logger *zap.Logger) error {
+func DeleteBucket(c *cli.Context, db *sql.DB, cfg *config.Config, logger *zap.Logger) error {
 	if c.NArg() != 1 {
 		return fmt.Errorf("usage: delete-bucket <bucket_id>")
 	}
