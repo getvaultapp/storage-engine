@@ -30,7 +30,7 @@ func RunCli() {
 				Name:  "create-bucket",
 				Usage: "Create an empty bucket. Usage: create-bucket <bukcet_id> <owner_id>",
 				Action: func(c *cli.Context) error {
-					return newBucketCommand(c, db, cfg, logger)
+					return newBucketCommand(c, db)
 				},
 			},
 			{
