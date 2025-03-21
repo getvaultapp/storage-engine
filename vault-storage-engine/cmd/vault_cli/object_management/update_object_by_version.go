@@ -28,6 +28,9 @@ func UpdateByVersion(c *cli.Context, db *sql.DB, cfg *config.Config, logger *zap
 		return fmt.Errorf("failed to check if the %s exists", originalFile)
 	}
 
+	fmt.Println(getfile)
+	fmt.Println(originalFile)
+
 	// set the versionID
 	version := versionID
 

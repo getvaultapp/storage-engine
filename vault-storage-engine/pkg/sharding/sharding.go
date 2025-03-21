@@ -8,8 +8,8 @@ import (
 
 // ShardStore is an interface for storing shards
 type ShardStore interface {
-	StoreShard(objectID string, shardIdx int, shard []byte, location string) error
-	RetrieveShard(objectID string, shardIdx int, location string) ([]byte, error)
+	StoreShard(objectID, versionID string, shardIdx int, shard []byte, location string) error
+	RetrieveShard(objectID, versionID string, shardIdx int, location string) ([]byte, error)
 	DeleteShard(objectID string, shardIdx int, location string) error
 }
 
@@ -24,8 +24,8 @@ func NewLocalShardStore(basePath string) *LocalShardStore {
 }
 
 // StoreShard stores a shard locally
-func (store *LocalShardStore) StoreShard(objectID string, shardIdx int, shard []byte, location string) error {
-	shardPath := filepath.Join(store.BasePath, location, fmt.Sprintf("%s_shard_%d", objectID, shardIdx))
+func (store *LocalShardStore) StoreShard(objectID, versionID string, shardIdx int, shard []byte, location string) error {
+	shardPath := filepath.Join(store.BasePath, location, fmt.Sprintf("%s_shard-v%s_%d", objectID, versionID, shardIdx))
 	err := os.MkdirAll(filepath.Dir(shardPath), 0755)
 	if err != nil {
 		return fmt.Errorf("failed to create directory for shard: %w", err)
@@ -39,8 +39,9 @@ func (store *LocalShardStore) StoreShard(objectID string, shardIdx int, shard []
 }
 
 // RetrieveShard retrieves a shard locally
-func (store *LocalShardStore) RetrieveShard(objectID string, shardIdx int, location string) ([]byte, error) {
-	shardPath := filepath.Join(store.BasePath, location, fmt.Sprintf("%s_shard_%d", objectID, shardIdx))
+func (store *LocalShardStore) RetrieveShard(objectID, versionID string, shardIdx int, location string) ([]byte, error) {
+	// add version_id to the shard path
+	shardPath := filepath.Join(store.BasePath, location, fmt.Sprintf("%s_shard-v%s_%d", objectID, versionID, shardIdx))
 	shard, err := os.ReadFile(shardPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read shard from file: %w", err)

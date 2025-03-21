@@ -74,6 +74,9 @@ func ListAllBuckets(db *sql.DB) ([]string, error) {
 	for _, bucket_id := range bucketIDs {
 		fmt.Println("* ", bucket_id)
 	}
+	if bucketIDs == nil {
+		fmt.Println("no active buckets")
+	}
 
 	return bucketIDs, nil
 }

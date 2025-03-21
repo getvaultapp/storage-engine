@@ -1,11 +1,8 @@
 package datastorage
 
 import (
-	"bytes"
-	"compress/gzip"
 	"database/sql"
 	"fmt"
-	"io"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -47,7 +44,7 @@ func StoreData(db *sql.DB, data []byte, bucketID, objectID, filePath string, sto
 	versionID := uuid.New().String()
 
 	// Compress data
-	var compressedBuffer bytes.Buffer
+	/* var compressedBuffer bytes.Buffer
 	gzipWriter := gzip.NewWriter(&compressedBuffer)
 	_, compressErr := gzipWriter.Write(data)
 	if compressErr != nil {
@@ -56,11 +53,11 @@ func StoreData(db *sql.DB, data []byte, bucketID, objectID, filePath string, sto
 	if gzipErr := gzipWriter.Close(); gzipErr != nil {
 		return "", nil, nil, fmt.Errorf("failed to close gzip writer, %w", err)
 	}
-	compressedData := compressedBuffer.Bytes()
+	compressedData := compressedBuffer.Bytes() */
 
 	// Encrypt compressed data
 	key := cfg.EncryptionKey
-	cipherText, err := encryption.Encrypt(compressedData, key)
+	cipherText, err := encryption.Encrypt(data, key)
 	if err != nil {
 		return "", nil, nil, fmt.Errorf("encryption failed: %w", err)
 	}
@@ -85,7 +82,7 @@ func StoreData(db *sql.DB, data []byte, bucketID, objectID, filePath string, sto
 			return "", nil, nil, fmt.Errorf("index out of range: idx=%d, locations length=%d", idx, len(locations))
 		}
 		location := locations[idx] // Use configured storage locations
-		err := store.StoreShard(objectID, idx, shard, location)
+		err := store.StoreShard(objectID, versionID, idx, shard, location)
 		if err != nil {
 			return "", nil, nil, fmt.Errorf("failed to store shard %d: %w", idx, err)
 		}
@@ -128,7 +125,7 @@ func StoreData(db *sql.DB, data []byte, bucketID, objectID, filePath string, sto
 		return "", nil, nil, fmt.Errorf("failed to register object in bucket: %w", err)
 	}
 
-	fmt.Printf("Stored object %s (version %s) in bucket %s\n", objectID, versionID, bucketID)
+	fmt.Printf("Stored %s as object %s (version %s) in bucket %s\n", filePath, objectID, versionID, bucketID)
 	return versionID, shardLocations, proofs, nil
 }
 
@@ -157,7 +154,7 @@ func RetrieveData(db *sql.DB, bucketID, objectID, versionID string, store shardi
 			missing++
 			continue
 		}
-		shard, err := store.RetrieveShard(objectID, shardIdx, location)
+		shard, err := store.RetrieveShard(objectID, versionID, shardIdx, location)
 		if err != nil {
 			logger.Warn("Shard retrieval failed", zap.String("shard", shardKey), zap.String("location", location))
 			missing++
@@ -182,13 +179,13 @@ func RetrieveData(db *sql.DB, bucketID, objectID, versionID string, store shardi
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to get encryption key: %w", err)
 	}
-	compressedData, err := encryption.Decrypt(cipherText, key)
+	data, err := encryption.Decrypt(cipherText, key)
 	if err != nil {
 		return nil, "", fmt.Errorf("decryption failed: %w", err)
 	}
 
 	// Decompressed Data
-	gzipReader, readErr := gzip.NewReader(bytes.NewReader(compressedData))
+	/* gzipReader, readErr := gzip.NewReader(bytes.NewReader(compressedData))
 	if readErr != nil {
 		return nil, "", fmt.Errorf("failed to create gzip reader, %w", readErr)
 	}
@@ -201,8 +198,8 @@ func RetrieveData(db *sql.DB, bucketID, objectID, versionID string, store shardi
 			return nil, "", fmt.Errorf("unexpected EOF when decompressing data, %w", err)
 		}
 		return nil, "", fmt.Errorf("failed to decompress data, %w", err)
-	}
-	plainText := decompressedBuffer.Bytes()
+	} */
+	plainText := data
 
 	// Fetch filename from the database
 	var filename string
@@ -233,7 +230,7 @@ func StoreDataWithVersion(db *sql.DB, data []byte, bucketID, objectID, versionID
 	}
 
 	// Compress data
-	var compressedBuffer bytes.Buffer
+	/* var compressedBuffer bytes.Buffer
 	gzipWriter := gzip.NewWriter(&compressedBuffer)
 	_, compressErr := gzipWriter.Write(data)
 	if compressErr != nil {
@@ -242,11 +239,11 @@ func StoreDataWithVersion(db *sql.DB, data []byte, bucketID, objectID, versionID
 	if gzipErr := gzipWriter.Close(); gzipErr != nil {
 		return "", nil, nil, fmt.Errorf("failed to close gzip writer, %w", err)
 	}
-	compressedData := compressedBuffer.Bytes()
+	compressedData := compressedBuffer.Bytes() */
 
 	// Encrypt compressed data
 	key := cfg.EncryptionKey
-	cipherText, err := encryption.Encrypt(compressedData, key)
+	cipherText, err := encryption.Encrypt(data, key)
 	if err != nil {
 		return "", nil, nil, fmt.Errorf("encryption failed: %w", err)
 	}
@@ -271,7 +268,7 @@ func StoreDataWithVersion(db *sql.DB, data []byte, bucketID, objectID, versionID
 			return "", nil, nil, fmt.Errorf("index out of range: idx=%d, locations length=%d", idx, len(locations))
 		}
 		location := locations[idx] // Use configured storage locations
-		err := store.StoreShard(objectID, idx, shard, location)
+		err := store.StoreShard(objectID, versionID, idx, shard, location)
 		if err != nil {
 			return "", nil, nil, fmt.Errorf("failed to store shard %d: %w", idx, err)
 		}
@@ -314,6 +311,6 @@ func StoreDataWithVersion(db *sql.DB, data []byte, bucketID, objectID, versionID
 		return "", nil, nil, fmt.Errorf("failed to register object in bucket: %w", err)
 	}
 
-	fmt.Printf("Stored object %s (version %s) in bucket %s\n", objectID, versionID, bucketID)
+	fmt.Printf("Stored %s as object %s (version %s) in bucket %s\n", filePath, objectID, versionID, bucketID)
 	return versionID, shardLocations, proofs, nil
 }
