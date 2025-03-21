@@ -12,7 +12,7 @@ import (
 )
 
 func DeleteObject(c *cli.Context, db *sql.DB, cfg *config.Config, logger *zap.Logger) error {
-	if c.NArg() < 3 {
+	if c.NArg() != 3 {
 		return fmt.Errorf("usage: delete-object <bucket_id> <object_id> <version_id>")
 	}
 
@@ -25,6 +25,8 @@ func DeleteObject(c *cli.Context, db *sql.DB, cfg *config.Config, logger *zap.Lo
 	if err != nil {
 		return fmt.Errorf("failed to delete object")
 	}
+
+	fmt.Printf("Successfully deleted object %s version (%s)\n", objectID, versionID)
 
 	return nil
 }

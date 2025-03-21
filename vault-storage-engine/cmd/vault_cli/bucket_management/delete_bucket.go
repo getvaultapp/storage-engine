@@ -24,6 +24,7 @@ func DeleteBucket(c *cli.Context, db *sql.DB, cfg *config.Config, logger *zap.Lo
 	if err != nil {
 		return fmt.Errorf("failed to delete bucket")
 	}
+	fmt.Println("Successfully deleted bucket ", bucketID)
 
 	return nil
 }

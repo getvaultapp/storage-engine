@@ -20,7 +20,7 @@ func NewBucketCommand(c *cli.Context, db *sql.DB) error {
 	if err != nil {
 		return fmt.Errorf("failed to create new bucket, %w", err)
 	}
-	fmt.Printf("Succcessfully create bucket: \"%s\" for \"%s\"\n", bucketID, ownerID)
+	fmt.Printf("Succcessfully created bucket: \"%s\" for \"%s\"\n", bucketID, ownerID)
 
 	return nil
 }

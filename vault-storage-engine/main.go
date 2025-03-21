@@ -11,7 +11,10 @@ func main() {
 		})
 	})
 
-	r.Run(":8080") // This should listen and serve on this address */
-
+	err := r.Run("0.0.0.0:5000") // This should listen and serve on this address
+	if err != nil {
+		panic("Failed to start server: " + err.Error())
+	}
+	*/
 	vault_cli.RunCli()
 }
