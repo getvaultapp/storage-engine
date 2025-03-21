@@ -164,7 +164,7 @@ func DeleteObject(db *sql.DB, bucketID, objectID string) error {
 	query := "DELETE FROM versions WHERE object_id = ?"
 	_, err := db.Exec(query, objectID)
 	if err != nil {
-		return fmt.Errorf("failed to delete object versions: %w", err)
+		return fmt.Errorf("failed to delete objects: %w", err)
 	}
 
 	// Remove the objects
@@ -173,6 +173,16 @@ func DeleteObject(db *sql.DB, bucketID, objectID string) error {
 	if err != nil {
 		return fmt.Errorf("failed to delete the object, %w", err)
 	}
+	return nil
+}
+
+func DeleteObjectByVersion(db *sql.DB, bucketID, objectID, versionID string) error {
+	query := "DELETE FROM versions WHERE object_id = ? AND version_id = ?"
+	_, err := db.Exec(query, objectID, versionID)
+	if err != nil {
+		return fmt.Errorf("failed to delete object version, %w", err)
+	}
+
 	return nil
 }
 

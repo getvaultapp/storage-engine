@@ -36,7 +36,7 @@ func DeleteBucket(db *sql.DB, bucketID string, store sharding.ShardStore, logger
 	return nil
 }
 
-// Deelete an object
+// Deelete all versions of an object
 func DeleteObject(db *sql.DB, bucketID, objectID, versionID string, store sharding.ShardStore, logger *zap.Logger) error {
 	metadata, err := bucket.GetObjectMetadata(db, objectID, versionID)
 	if err != nil {
@@ -57,6 +57,33 @@ func DeleteObject(db *sql.DB, bucketID, objectID, versionID string, store shardi
 	}
 
 	err = bucket.DeleteObject(db, bucketID, objectID)
+	if err != nil {
+		return fmt.Errorf("failed to delete object from database, %w", err)
+	}
+
+	return nil
+}
+
+func DeleteObjectByVersion(db *sql.DB, bucketID, objectID, versionID string, store sharding.ShardStore, logger *zap.Logger) error {
+	metadata, err := bucket.GetObjectMetadata(db, objectID, versionID)
+	if err != nil {
+		return fmt.Errorf("failed to retieve metadata file, %w", err)
+	}
+
+	for shardKey, location := range metadata.ShardLocations {
+		shardIdxStr := strings.TrimPrefix(shardKey, "shard_")
+		shardIdx, err := strconv.Atoi(shardIdxStr)
+		if err != nil {
+			logger.Warn("invalid shard index", zap.String("shardKey", shardKey), zap.Error(err))
+			continue
+		}
+		delShardErr := store.DeleteShardByVersion(objectID, versionID, shardIdx, location)
+		if delShardErr != nil {
+			logger.Warn("failed to delete shards", zap.String("shard", shardKey), zap.String("location", location), zap.Error(err))
+		}
+	}
+
+	err = bucket.DeleteObjectByVersion(db, bucketID, objectID, versionID)
 	if err != nil {
 		return fmt.Errorf("failed to delete object from database, %w", err)
 	}

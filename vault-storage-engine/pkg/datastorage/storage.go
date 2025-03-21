@@ -43,18 +43,6 @@ func StoreData(db *sql.DB, data []byte, bucketID, objectID, filePath string, sto
 	// Generate unique version ID
 	versionID := uuid.New().String()
 
-	// Compress data
-	/* var compressedBuffer bytes.Buffer
-	gzipWriter := gzip.NewWriter(&compressedBuffer)
-	_, compressErr := gzipWriter.Write(data)
-	if compressErr != nil {
-		return "", nil, nil, fmt.Errorf("failed to compress data, %w", err)
-	}
-	if gzipErr := gzipWriter.Close(); gzipErr != nil {
-		return "", nil, nil, fmt.Errorf("failed to close gzip writer, %w", err)
-	}
-	compressedData := compressedBuffer.Bytes() */
-
 	// Encrypt compressed data
 	key := cfg.EncryptionKey
 	cipherText, err := encryption.Encrypt(data, key)
@@ -184,21 +172,6 @@ func RetrieveData(db *sql.DB, bucketID, objectID, versionID string, store shardi
 		return nil, "", fmt.Errorf("decryption failed: %w", err)
 	}
 
-	// Decompressed Data
-	/* gzipReader, readErr := gzip.NewReader(bytes.NewReader(compressedData))
-	if readErr != nil {
-		return nil, "", fmt.Errorf("failed to create gzip reader, %w", readErr)
-	}
-	defer gzipReader.Close()
-
-	var decompressedBuffer bytes.Buffer
-	_, err = io.Copy(&decompressedBuffer, gzipReader)
-	if err != nil {
-		if err == io.ErrUnexpectedEOF {
-			return nil, "", fmt.Errorf("unexpected EOF when decompressing data, %w", err)
-		}
-		return nil, "", fmt.Errorf("failed to decompress data, %w", err)
-	} */
 	plainText := data
 
 	// Fetch filename from the database
@@ -228,18 +201,6 @@ func StoreDataWithVersion(db *sql.DB, data []byte, bucketID, objectID, versionID
 	if !bucketExists {
 		return "", nil, nil, fmt.Errorf("bucket %s does not exists", bucketID)
 	}
-
-	// Compress data
-	/* var compressedBuffer bytes.Buffer
-	gzipWriter := gzip.NewWriter(&compressedBuffer)
-	_, compressErr := gzipWriter.Write(data)
-	if compressErr != nil {
-		return "", nil, nil, fmt.Errorf("failed to compress data, %w", err)
-	}
-	if gzipErr := gzipWriter.Close(); gzipErr != nil {
-		return "", nil, nil, fmt.Errorf("failed to close gzip writer, %w", err)
-	}
-	compressedData := compressedBuffer.Bytes() */
 
 	// Encrypt compressed data
 	key := cfg.EncryptionKey

@@ -13,7 +13,7 @@ import (
 
 func DeleteObject(c *cli.Context, db *sql.DB, cfg *config.Config, logger *zap.Logger) error {
 	if c.NArg() != 3 {
-		return fmt.Errorf("usage: delete-object <bucket_id> <object_id> <version_id>")
+		return fmt.Errorf("usage: delete-object <bucket_id> <object_id> <initial_version_id>")
 	}
 
 	bucketID := c.Args().Get(0)
