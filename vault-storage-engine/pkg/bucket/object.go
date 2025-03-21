@@ -143,6 +143,22 @@ func GetRootVersion(db *sql.DB, objectID string) (string, error) {
 	return rootVersion, nil
 }
 
+/* func updateObjectByVersion(db *sql.DB, bucketID, objectID string) {
+	versionID := uuid.New() // New version id
+
+	var objectExists bool
+	query := "SELECT EXISTS(SELECT 1 FROM objects WHERE id = ? AND bucket_id = ? AND filename = ?)"
+	err := db.QueryRow(query, objectID, bucketID, filename).Scan(&objectExists)
+	if err != nil {
+		return fmt.Errorf("failed to check if object exists: %w", err)
+	}
+
+	// Check if the object exists
+	// Check if the filename exists
+	// if they both match, create a new version, update query
+
+} */
+
 func DeleteObject(db *sql.DB, bucketID, objectID string) error {
 	// Remove the object versions
 	query := "DELETE FROM versions WHERE object_id = ?"
@@ -158,4 +174,37 @@ func DeleteObject(db *sql.DB, bucketID, objectID string) error {
 		return fmt.Errorf("failed to delete the object, %w", err)
 	}
 	return nil
+}
+
+func UpdateFileVersionIfItExists(db *sql.DB, originalFile, bucketID, objectID string) (string, string, error) {
+	// This returns the filename of an object, to check if it matches with the originalFile (file argument)
+	version := uuid.New()
+	query := `SELECT filename FROM objects WHERE id = ? AND bucket_id = ?`
+	rows, err := db.Query(query, objectID, bucketID)
+	if err != nil {
+		return "", "", fmt.Errorf("operation failed %w", err)
+	}
+
+	var filename string
+
+	for rows.Next() {
+		var foundFilename string
+		err := rows.Scan(&foundFilename)
+		if err != nil {
+			return "", "", fmt.Errorf("no filename for object %s", objectID)
+		}
+		//fmt.Println(foundFilename)
+		filename = foundFilename
+	}
+	if filename == originalFile {
+		// Update the latest version in the metadata.db
+		query := "UPDATE objects SET latest_version = ? WHERE id = ? AND bucket_id = ? AND filename = ?"
+		_, err = db.Exec(query, version, objectID, bucketID, filename)
+		if err != nil {
+			return "", "", fmt.Errorf("failed to update object version, %s", err)
+		}
+
+	}
+
+	return filename, version.String(), nil
 }

@@ -43,7 +43,7 @@ func StoreCommand(c *cli.Context, db *sql.DB, cfg *config.Config, logger *zap.Lo
 	objectID := uuid.New().String() // Generate a unique object ID
 
 	// Shard and store data
-	versionID, shardLocations, proofs, err := datastorage.StoreData(db, data, bucketID, objectID, filepath.Base(filePath), store, cfg, locations, logger)
+	_, shardLocations, proofs, err := datastorage.StoreData(db, data, bucketID, objectID, filepath.Base(filePath), store, cfg, locations, logger)
 	if err != nil {
 		return fmt.Errorf("store failed: %w", err)
 	}
@@ -83,6 +83,6 @@ func StoreCommand(c *cli.Context, db *sql.DB, cfg *config.Config, logger *zap.Lo
 
 		return nil
 	}) */
-	fmt.Printf("Stored file as version %s in bucket %s\n", versionID, bucketID)
+	//fmt.Printf("Stored file as version %s in bucket %s\n", versionID, bucketID)
 	return nil
 }

@@ -72,6 +72,13 @@ func RunCli() {
 				},
 			},
 			{
+				Name:  "update-object",
+				Usage: "Updates the version of a object. Usage: update-object <bucket_id> <object_id> <filename>",
+				Action: func(c *cli.Context) error {
+					return object_cli.UpdateByVersion(c, db, cfg, logger)
+				},
+			},
+			{
 				Name:  "delete-bucket",
 				Usage: "Deletes an entire bucket including all it's objects and their respective versions. Usage: delete-bucket <bucket-id>",
 				Action: func(c *cli.Context) error {
