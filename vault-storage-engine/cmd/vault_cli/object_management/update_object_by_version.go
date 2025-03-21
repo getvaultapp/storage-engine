@@ -58,6 +58,8 @@ func UpdateByVersion(c *cli.Context, db *sql.DB, cfg *config.Config, logger *zap
 		if err != nil {
 			return fmt.Errorf("failed to store updated object, %w", err)
 		}
+	} else {
+		return fmt.Errorf("object does not have filename, %s: %w", originalFile, err)
 	}
 	return nil
 }
