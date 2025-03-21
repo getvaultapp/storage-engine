@@ -16,7 +16,7 @@ import (
 
 func UpdateByVersion(c *cli.Context, db *sql.DB, cfg *config.Config, logger *zap.Logger) error {
 	if c.NArg() != 3 {
-		return fmt.Errorf("usage: check-file <bucket_id> <object_id> <filename>")
+		return fmt.Errorf("usage: update-object <bucket_id> <object_id> <filename>")
 	}
 
 	bucketID := c.Args().Get(0)
