@@ -28,16 +28,13 @@ func UpdateByVersion(c *cli.Context, db *sql.DB, cfg *config.Config, logger *zap
 		return fmt.Errorf("failed to check if the %s exists", originalFile)
 	}
 
-	fmt.Println(getfile)
-	fmt.Println(originalFile)
-
 	// set the versionID
 	version := versionID
 
 	// if the filename gotten from the metadata correlates with the user-provided filename
 	// go ahead and store it accorfingly
 	if originalFile == getfile {
-		fmt.Println("Object Exists. Updating ...")
+		fmt.Printf("Object (%s) exists. Proceeding to update ...\n", objectID)
 		data, err := os.ReadFile(originalFile)
 		if err != nil {
 			return fmt.Errorf("failed to read file: %w", err)

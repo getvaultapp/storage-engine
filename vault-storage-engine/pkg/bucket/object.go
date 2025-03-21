@@ -143,22 +143,6 @@ func GetRootVersion(db *sql.DB, objectID string) (string, error) {
 	return rootVersion, nil
 }
 
-/* func updateObjectByVersion(db *sql.DB, bucketID, objectID string) {
-	versionID := uuid.New() // New version id
-
-	var objectExists bool
-	query := "SELECT EXISTS(SELECT 1 FROM objects WHERE id = ? AND bucket_id = ? AND filename = ?)"
-	err := db.QueryRow(query, objectID, bucketID, filename).Scan(&objectExists)
-	if err != nil {
-		return fmt.Errorf("failed to check if object exists: %w", err)
-	}
-
-	// Check if the object exists
-	// Check if the filename exists
-	// if they both match, create a new version, update query
-
-} */
-
 func DeleteObject(db *sql.DB, bucketID, objectID string) error {
 	// Remove the object versions
 	query := "DELETE FROM versions WHERE object_id = ?"
