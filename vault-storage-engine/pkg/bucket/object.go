@@ -40,10 +40,12 @@ func AddObject(db *sql.DB, bucketID, objectID, filename string) error {
 	}
 
 	if objectExists {
-		//err := updateObjectVersion(db, objectID, bucketID)
-		versionID := uuid.New()
+		latest_version_id, err := getLatestVersion(db, objectID)
+		if err != nil {
+			return fmt.Errorf("error getting latest version, %w", err)
+		}
 		query := "UPDATE objects SET latest_version = ? WHERE id = ? AND bucket_id = ? AND filename = ?"
-		_, err = db.Exec(query, versionID, objectID, bucketID, filename)
+		_, err = db.Exec(query, latest_version_id, objectID, bucketID, filename)
 		if err != nil {
 			return fmt.Errorf("failed to update object version, %s", err)
 		}
@@ -51,7 +53,7 @@ func AddObject(db *sql.DB, bucketID, objectID, filename string) error {
 		return nil
 	}
 
-	var filenameExists bool
+	/* var filenameExists bool
 	query = "SELECT EXISTS(SELECT filename FROM objects WHERE id = ? AND bucket_id = ? AND filename = ?)"
 	err = db.QueryRow(query, objectID, bucketID, filename).Scan(&filenameExists)
 	if err != nil {
@@ -68,7 +70,7 @@ func AddObject(db *sql.DB, bucketID, objectID, filename string) error {
 		}
 
 		return nil
-	}
+	} */
 
 	query = "INSERT INTO objects (id, bucket_id, filename) VALUES (?, ?, ?)"
 	_, err = db.Exec(query, objectID, bucketID, filename)
@@ -97,9 +99,13 @@ func AddVersion(db *sql.DB, bucketID, objectID, versionID, rootVersion string, m
 		return fmt.Errorf("failed to update object latest version: %w", err)
 	}
 
+	latest_version_id, err := getLatestVersion(db, objectID)
+	if err != nil {
+		return fmt.Errorf("error getting latest version, %w", err)
+	}
 	// Update the latest version for the object
 	updateQuery := `UPDATE objects SET latest_version = ? WHERE id = ?`
-	_, err = db.Exec(updateQuery, versionID, objectID)
+	_, err = db.Exec(updateQuery, latest_version_id, objectID)
 	if err != nil {
 		return fmt.Errorf("failed to update object latest version: %w", err)
 	}
@@ -130,6 +136,20 @@ func GetObjectMetadata(db *sql.DB, objectID, versionID string) (*VersionMetadata
 	return &metadata, nil
 }
 
+func getLatestVersion(db *sql.DB, objectID string) (string, error) {
+	query := `SELECT version_id FROM versions WHERE object_id = ? ORDER BY version_id DESC LIMIT 1`
+	row := db.QueryRow(query, objectID)
+	var latestVersionID string
+	err := row.Scan(&latestVersionID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return "", fmt.Errorf("no versions found for object %s", objectID)
+		}
+		return "", fmt.Errorf("failed to get latest version ID: %w", err)
+	}
+
+	return latestVersionID, nil
+}
 func GetRootVersion(db *sql.DB, objectID string) (string, error) {
 	// Do nothing yet
 	var rootVersion string
