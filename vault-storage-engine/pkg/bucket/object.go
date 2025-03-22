@@ -53,25 +53,6 @@ func AddObject(db *sql.DB, bucketID, objectID, filename string) error {
 		return nil
 	}
 
-	/* var filenameExists bool
-	query = "SELECT EXISTS(SELECT filename FROM objects WHERE id = ? AND bucket_id = ? AND filename = ?)"
-	err = db.QueryRow(query, objectID, bucketID, filename).Scan(&filenameExists)
-	if err != nil {
-		return fmt.Errorf("failed to object update version: %w", err)
-	}
-
-	if filenameExists {
-		//err := updateObjectVersion(db, objectID, bucketID)
-		versionID := uuid.New()
-		query := "UPDATE objects SET latest_version = ? WHERE id = ? AND bucket_id = ? AND filename = ?"
-		_, err = db.Exec(query, versionID, objectID, bucketID, filename)
-		if err != nil {
-			return fmt.Errorf("failed to update object version, %s", err)
-		}
-
-		return nil
-	} */
-
 	query = "INSERT INTO objects (id, bucket_id, filename) VALUES (?, ?, ?)"
 	_, err = db.Exec(query, objectID, bucketID, filename)
 	if err != nil {
@@ -185,6 +166,16 @@ func DeleteObjectByVersion(db *sql.DB, bucketID, objectID, versionID string) err
 	_, err := db.Exec(query, objectID, versionID)
 	if err != nil {
 		return fmt.Errorf("failed to delete object version, %w", err)
+	}
+
+	latest_version_id, err := getLatestVersion(db, objectID)
+	if err != nil {
+		return fmt.Errorf("error getting latest version, %w", err)
+	}
+	query = "UPDATE objects SET latest_version = ? WHERE id = ? AND bucket_id = ?"
+	_, err = db.Exec(query, latest_version_id, objectID, bucketID)
+	if err != nil {
+		return fmt.Errorf("failed to update object version, %s", err)
 	}
 
 	return nil
