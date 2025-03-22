@@ -4,11 +4,11 @@ import (
 	"log"
 	"os"
 
-	bucket_cli "github.com/getvaultapp/vault-storage-engine/cmd/vault_cli/bucket_management"
-	metadata_cli "github.com/getvaultapp/vault-storage-engine/cmd/vault_cli/handling_metadata"
-	object_cli "github.com/getvaultapp/vault-storage-engine/cmd/vault_cli/object_management"
-	"github.com/getvaultapp/vault-storage-engine/pkg/bucket"
-	"github.com/getvaultapp/vault-storage-engine/pkg/config"
+	bucket_cli "github.com/getvaultapp/storage-engine/vault-storage-engine/cmd/vault_cli/bucket_management"
+	metadata_cli "github.com/getvaultapp/storage-engine/vault-storage-engine/cmd/vault_cli/handling_metadata"
+	object_cli "github.com/getvaultapp/storage-engine/vault-storage-engine/cmd/vault_cli/object_management"
+	"github.com/getvaultapp/storage-engine/vault-storage-engine/pkg/bucket"
+	"github.com/getvaultapp/storage-engine/vault-storage-engine/pkg/config"
 	"github.com/urfave/cli/v2"
 	"go.uber.org/zap"
 )

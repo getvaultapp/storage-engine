@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/getvaultapp/vault-storage-engine/pkg/bucket"
-	"github.com/getvaultapp/vault-storage-engine/pkg/sharding"
+	"github.com/getvaultapp/storage-engine/vault-storage-engine/pkg/bucket"
+	"github.com/getvaultapp/storage-engine/vault-storage-engine/pkg/sharding"
 	"go.uber.org/zap"
 )
 

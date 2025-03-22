@@ -3,7 +3,7 @@ package api
 import (
 	"net/http"
 
-	"github.com/getvaultapp/vault-storage-engine/pkg/auth"
+	"github.com/getvaultapp/storage-engine/vault-storage-engine/pkg/auth"
 	"github.com/gin-gonic/gin"
 )
 

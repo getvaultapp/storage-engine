@@ -3,7 +3,7 @@ package bucket
 import (
 	"fmt"
 
-	"github.com/getvaultapp/vault-storage-engine/pkg/config"
+	"github.com/getvaultapp/storage-engine/vault-storage-engine/pkg/config"
 )
 
 // GetEncryptionKey retrieves the encryption key from the configuration

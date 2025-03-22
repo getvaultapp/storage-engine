@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/getvaultapp/vault-storage-engine/pkg/config"
-	"github.com/getvaultapp/vault-storage-engine/pkg/datastorage"
-	"github.com/getvaultapp/vault-storage-engine/pkg/sharding"
+	"github.com/getvaultapp/storage-engine/vault-storage-engine/pkg/config"
+	"github.com/getvaultapp/storage-engine/vault-storage-engine/pkg/datastorage"
+	"github.com/getvaultapp/storage-engine/vault-storage-engine/pkg/sharding"
 	"github.com/urfave/cli/v2"
 	"go.uber.org/zap"
 )
