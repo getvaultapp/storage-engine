@@ -1,11 +1,11 @@
 package api
 
-/* import (
+/*import (
 	"database/sql"
 
-	"github.com/getvault-mvp/vault-base/pkg/auth"
-	"github.com/getvault-mvp/vault-base/pkg/config"
-	"github.com/getvault-mvp/vault-base/pkg/sharding"
+	"github.com/getvaultapp/storage-engine/vault-storage-engine/pkg/auth"
+	"github.com/getvaultapp/storage-engine/vault-storage-engine/pkg/config"
+	"github.com/getvaultapp/storage-engine/vault-storage-engine/pkg/sharding"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )
@@ -28,7 +28,7 @@ func SetupRouter(db *sql.DB) *gin.Engine {
 		UploadObjectHandler(c, db)
 	})
 	r.GET("/buckets/:bucket_id/objects/:object_id", auth.JWTMiddleware(), auth.RBACMiddleware("reader"), func(c *gin.Context) {
-		RetrieveObjectHandler(c, db)
+		RetrieveObjectHandler(c, db, cfg, logger)
 	})
 	r.GET("/buckets/:bucket_id/objects/:object_id/versions", auth.JWTMiddleware(), auth.RBACMiddleware("reader"), func(c *gin.Context) {
 		ListVersionsHandler(c, db)
@@ -40,4 +40,5 @@ func SetupRouter(db *sql.DB) *gin.Engine {
 		SetBucketPermissionsHandler(c, db)
 	})
 	return r
-} */
+}
+*/

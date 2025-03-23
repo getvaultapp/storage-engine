@@ -5,6 +5,13 @@ import (
 	"fmt"
 )
 
+type Permission struct {
+	ResourceID   string
+	ResourceType string
+	UserID       string
+	Permission   string
+}
+
 // AddPermission grants a user read/write access to a bucket or object
 func AddPermission(db *sql.DB, resourceID, resourceType, userID, permission string) error {
 	query := `INSERT INTO acl (resource_id, resource_type, user_id, permission) VALUES (?, ?, ?, ?)`
@@ -100,4 +107,24 @@ func CheckPermissionWithCache(db *sql.DB, resourceID, resourceType, userID, perm
 	// Cache result
 	CachePermission(userID, resourceID, permission, allowed)
 	return allowed, nil
+}
+
+func ListPermissions(db *sql.DB) ([]Permission, error) {
+	query := "SELECT resource_id, resource_type, user_id, permission FROM permissions"
+	rows, err := db.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var permissions []Permission
+	for rows.Next() {
+		var permission Permission
+		if err := rows.Scan(&permission.ResourceID, &permission.ResourceType, &permission.UserID, &permission.Permission); err != nil {
+			return nil, err
+		}
+		permissions = append(permissions, permission)
+	}
+
+	return permissions, nil
 }

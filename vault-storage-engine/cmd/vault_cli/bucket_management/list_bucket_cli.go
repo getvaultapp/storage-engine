@@ -4,8 +4,8 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/getvaultapp/vault-storage-engine/pkg/bucket"
-	"github.com/getvaultapp/vault-storage-engine/pkg/config"
+	"github.com/getvaultapp/storage-engine/vault-storage-engine/pkg/bucket"
+	"github.com/getvaultapp/storage-engine/vault-storage-engine/pkg/config"
 	"github.com/urfave/cli/v2"
 	"go.uber.org/zap"
 )

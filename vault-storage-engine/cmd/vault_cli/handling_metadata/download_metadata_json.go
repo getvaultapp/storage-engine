@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/getvaultapp/vault-storage-engine/pkg/bucket"
+	"github.com/getvaultapp/storage-engine/vault-storage-engine/pkg/bucket"
 	"github.com/urfave/cli/v2"
 )
 

@@ -19,6 +19,33 @@ import (
 	"go.uber.org/zap"
 )
 
+type Object struct {
+	ObjectID string
+	Name     string
+	Version  string
+}
+
+// ListObjects lists all objects in a bucket
+func ListObjects(db *sql.DB, bucketID string) ([]Object, error) {
+	query := "SELECT object_id, name, version FROM objects WHERE bucket_id = $1"
+	rows, err := db.Query(query, bucketID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var objects []Object
+	for rows.Next() {
+		var object Object
+		if err := rows.Scan(&object.ObjectID, &object.Name, &object.Version); err != nil {
+			return nil, err
+		}
+		objects = append(objects, object)
+	}
+
+	return objects, nil
+}
+
 // StoreData stores an object inside a bucket
 // StoreData only works for a valid bucket, an invalid bucket would return an error
 // The files to be stored are provided an objectID and a versionID
