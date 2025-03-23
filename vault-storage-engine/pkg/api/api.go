@@ -21,29 +21,29 @@ func SetupRouter(db *sql.DB, cfg *config.Config, logger *zap.Logger) *gin.Engine
 		c.Next()
 	})
 
+	// Confirmation
+	router.GET("/", HomeHandler)
+
 	// Public endpoints
 	router.POST("/auth/login", LoginHandler)
 	router.POST("/auth/register", RegisterHandler)
 
-	// Check server
-	router.POST("/", HomeHandler)
-
 	// Protected endpoints
-	authGroup := router.Group("/api")
+	authGroup := router.Group("/v1")
 	authGroup.Use(auth.JWTMiddleware())
 	{
-		authGroup.GET("/list/buckets", ListBucketsHandler)
-		authGroup.POST("/create/buckets", CreateBucketHandler)
+		authGroup.GET("/buckets", ListBucketsHandler)
+		authGroup.POST("/buckets", CreateBucketHandler)
 		authGroup.GET("/buckets/:bucketID", GetBucketHandler)
-		authGroup.DELETE("/delete/buckets/:bucketID", DeleteBucketHandler)
+		authGroup.DELETE("/buckets/:bucketID", DeleteBucketHandler)
 
-		authGroup.GET("/list/objects/:bucketID", ListObjectsHandler)
-		authGroup.POST("/upload/objects/:bucketID", UploadObjectHandler)
-		authGroup.GET("/download/objects/:bucketID/:objectID", GetObjectHandler)
-		authGroup.GET("/download/objects/:bucketID/:objectID/:versionID", GetObjectByVersionHandler)
-		authGroup.POST("/update/objects/:bucketID/:objectID/update", UpdateObjectVersionHandler)
-		authGroup.DELETE("/delete/objects/:bucketID/:objectID/:versionID", DeleteObjectByVersionHandler)
-		authGroup.DELETE("/delete/objects/:bucketID/:objectID", DeleteObjectHandler)
+		authGroup.GET("/objects/:bucketID", ListObjectsHandler)
+		authGroup.POST("/objects/:bucketID", UploadObjectHandler)
+		authGroup.GET("/objects/:bucketID/:objectID", GetObjectHandler)
+		authGroup.GET("/objects/:bucketID/:objectID/:versionID", GetObjectByVersionHandler)
+		authGroup.POST("/objects/:bucketID/:objectID/update", UpdateObjectVersionHandler)
+		authGroup.DELETE("/objects/:bucketID/:objectID/:versionID", DeleteObjectByVersionHandler)
+		authGroup.DELETE("/objects/:bucketID/:objectID", DeleteObjectHandler)
 
 		/* authGroup.GET("/objects/:bucketID/:objectID/:versionID", CheckFileIntegrityHandler)
 		authGroup.GET("/objects/:bucketID/:objectID", GetStorageAnalyticsHandler)

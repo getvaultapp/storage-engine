@@ -457,3 +457,9 @@ func AddUserToGroupHandler(c *gin.Context) {
 
 	c.JSON(http.StatusCreated, gin.H{"message": "User added to group successfully"})
 }
+
+func CheckFileIntegrityHandler(c *gin.Context) {}
+
+func GetStorageAnalyticsHandler(c *gin.Context) {}
+
+func GetStorageInfoHandler(c *gin.Context) {}

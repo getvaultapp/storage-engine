@@ -1,12 +1,18 @@
 package auth
 
-/* import (
+import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/spf13/viper"
 )
 
-var jwtSecret = []byte("d3ad5f0c909522ce404680156fdaccd5c3ff9527dc41198a65ff1829c21ffc81")
+var jwtSecret []byte
+
+// Initialize JWT secret
+func InitJWTSecret() {
+	jwtSecret = []byte(viper.GetString("jwtSecret"))
+}
 
 // GenerateJWT creates a JWT for a user
 func GenerateJWT(userID, role string) (string, error) {
@@ -19,4 +25,3 @@ func GenerateJWT(userID, role string) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString(jwtSecret)
 }
-*/

@@ -1,14 +1,12 @@
 package main
 
 import (
-	"database/sql"
-	"fmt"
 	"log"
-	"os"
 
 	"github.com/getvaultapp/storage-engine/vault-storage-engine/pkg/api"
+	"github.com/getvaultapp/storage-engine/vault-storage-engine/pkg/auth"
+	"github.com/getvaultapp/storage-engine/vault-storage-engine/pkg/bucket"
 	"github.com/getvaultapp/storage-engine/vault-storage-engine/pkg/utils"
-	_ "github.com/mattn/go-sqlite3"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 )
@@ -20,14 +18,16 @@ func initConfig() {
 	viper.AutomaticEnv()
 
 	if err := viper.ReadInConfig(); err != nil {
-		fmt.Printf("Error reading config file, %s", err)
-		os.Exit(1)
+		log.Fatalf("Error reading config file: %v", err)
 	}
 }
 
 func main() {
 	// Initialize configuration
 	initConfig()
+
+	// Initialize JWT secret
+	auth.InitJWTSecret()
 
 	// Convert viper.Viper to config.Config
 	cfg := utils.ConvertViperToConfig(viper.GetViper())
@@ -36,10 +36,10 @@ func main() {
 	logger, _ := zap.NewProduction()
 	defer logger.Sync()
 
-	// Database connection
-	db, err := sql.Open("sqlite3", cfg.Database)
+	// Initialize the database
+	db, err := bucket.InitDB()
 	if err != nil {
-		log.Fatalf("Error connecting to the database: %v", err)
+		log.Fatalf("Error initializing the database: %v", err)
 	}
 	defer db.Close()
 
@@ -47,7 +47,7 @@ func main() {
 	router := api.SetupRouter(db, cfg, logger)
 
 	// Start the server
-	if err := router.Run(); err != nil {
+	if err := router.Run(cfg.ServerAddress); err != nil {
 		log.Fatalf("Error starting the server: %v", err)
 	}
 }
