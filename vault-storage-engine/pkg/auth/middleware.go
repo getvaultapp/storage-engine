@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -22,6 +23,8 @@ func JWTMiddleware() gin.HandlerFunc {
 		token, err := jwt.ParseWithClaims(tokenString, &claims, func(token *jwt.Token) (interface{}, error) {
 			return jwtSecret, nil
 		})
+
+		fmt.Println(token.Valid)
 
 		if err != nil || !token.Valid {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
