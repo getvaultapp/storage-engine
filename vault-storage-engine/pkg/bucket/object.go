@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"log"
 
 	"github.com/google/uuid"
 )
@@ -40,10 +41,8 @@ func AddObject(db *sql.DB, bucketID, objectID, filename string) error {
 	}
 
 	if objectExists {
-		latest_version_id, err := getLatestVersion(db, objectID)
-		if err != nil {
-			return fmt.Errorf("error getting latest version, %w", err)
-		}
+		latest_version_id := GetLatestVersion(db, objectID)
+
 		query := "UPDATE objects SET latest_version = ? WHERE id = ? AND bucket_id = ? AND filename = ?"
 		_, err = db.Exec(query, latest_version_id, objectID, bucketID, filename)
 		if err != nil {
@@ -80,10 +79,8 @@ func AddVersion(db *sql.DB, bucketID, objectID, versionID, rootVersion string, m
 		return fmt.Errorf("failed to update object latest version: %w", err)
 	}
 
-	latest_version_id, err := getLatestVersion(db, objectID)
-	if err != nil {
-		return fmt.Errorf("error getting latest version, %w", err)
-	}
+	latest_version_id := GetLatestVersion(db, objectID)
+
 	// Update the latest version for the object
 	updateQuery := `UPDATE objects SET latest_version = ? WHERE id = ?`
 	_, err = db.Exec(updateQuery, latest_version_id, objectID)
@@ -117,19 +114,22 @@ func GetObjectMetadata(db *sql.DB, objectID, versionID string) (*VersionMetadata
 	return &metadata, nil
 }
 
-func getLatestVersion(db *sql.DB, objectID string) (string, error) {
+// Pls review this, I believe we can still optimize it better
+func GetLatestVersion(db *sql.DB, objectID string) string {
 	query := `SELECT version_id FROM versions WHERE object_id = ? ORDER BY version_id DESC LIMIT 1`
 	row := db.QueryRow(query, objectID)
 	var latestVersionID string
 	err := row.Scan(&latestVersionID)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return "", fmt.Errorf("no versions found for object %s", objectID)
+			return ""
 		}
-		return "", fmt.Errorf("failed to get latest version ID: %w", err)
+		return ""
 	}
 
-	return latestVersionID, nil
+	log.Println(latestVersionID)
+
+	return latestVersionID
 }
 func GetRootVersion(db *sql.DB, objectID string) (string, error) {
 	// Do nothing yet
@@ -168,10 +168,8 @@ func DeleteObjectByVersion(db *sql.DB, bucketID, objectID, versionID string) err
 		return fmt.Errorf("failed to delete object version, %w", err)
 	}
 
-	latest_version_id, err := getLatestVersion(db, objectID)
-	if err != nil {
-		return fmt.Errorf("error getting latest version, %w", err)
-	}
+	latest_version_id := GetLatestVersion(db, objectID)
+
 	query = "UPDATE objects SET latest_version = ? WHERE id = ? AND bucket_id = ?"
 	_, err = db.Exec(query, latest_version_id, objectID, bucketID)
 	if err != nil {

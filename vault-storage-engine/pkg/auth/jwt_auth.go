@@ -10,11 +10,13 @@ import (
 var jwtSecret []byte
 
 // Initialize JWT secret
+
 func InitJWTSecret() {
 	jwtSecret = []byte(viper.GetString("jwtSecret"))
 }
 
 // GenerateJWT creates a JWT for a user
+
 func GenerateJWT(userID, role string) (string, error) {
 	claims := jwt.MapClaims{
 		"user_id": userID,

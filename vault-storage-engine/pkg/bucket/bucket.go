@@ -28,8 +28,10 @@ func CreateBucket(db *sql.DB, bucketID string, owner string) error {
 		return nil
 	}
 
-	query = `INSERT INTO buckets (bucket_id, owner) VALUES (?, ?)`
-	_, err = db.Exec(query, bucketID, owner)
+	time := time.Now().Format(time.RFC3339)
+
+	query = `INSERT INTO buckets (bucket_id, owner, created_at) VALUES (?, ?, ?)`
+	_, err = db.Exec(query, bucketID, owner, time)
 	if err != nil {
 		return fmt.Errorf("failed to create bucket: %w", err)
 	}
@@ -38,8 +40,9 @@ func CreateBucket(db *sql.DB, bucketID string, owner string) error {
 }
 
 // GetBucket retrieves a bucket by ID
+// This should return a new bucket instance
 func GetBucket(db *sql.DB, bucketID string) (*Bucket, error) {
-	query := `SELECT bucket_id, owner, created_at FROM buckets WHERE bucket_id = ?`
+	query := `SELECT bucket_id FROM buckets`
 	row := db.QueryRow(query, bucketID)
 
 	var bucket Bucket

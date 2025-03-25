@@ -40,10 +40,16 @@ func InitDB() (*sql.DB, error) {
 // initializeSchema sets up the database schema if it doesn't exist.
 func initializeSchema(db *sql.DB) error {
 	schema := `
+	CREATE TABLE IF NOT EXISTS users (
+    	id INTEGER PRIMARY KEY AUTOINCREMENT,
+    	username TEXT NOT NULL UNIQUE,
+    	password TEXT NOT NULL
+	);
 	CREATE TABLE IF NOT EXISTS buckets (
 		id TEXT PRIMARY KEY,
-		bucket_id NOT NULL,
-		owner TEXT NOT NULL
+		bucket_id TEXT NOT NULL,
+		owner TEXT NOT NULL,
+		created_at TEXT NOT NULL
 	);
 	CREATE TABLE IF NOT EXISTS objects (
 		id TEXT PRIMARY KEY,

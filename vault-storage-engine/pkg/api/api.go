@@ -3,7 +3,6 @@ package api
 import (
 	"database/sql"
 
-	"github.com/getvaultapp/storage-engine/vault-storage-engine/pkg/acl"
 	"github.com/getvaultapp/storage-engine/vault-storage-engine/pkg/auth"
 	"github.com/getvaultapp/storage-engine/vault-storage-engine/pkg/config"
 	"github.com/gin-gonic/gin"
@@ -20,9 +19,6 @@ func SetupRouter(db *sql.DB, cfg *config.Config, logger *zap.Logger) *gin.Engine
 		c.Set("logger", logger)
 		c.Next()
 	})
-
-	// Confirmation
-	router.GET("/", HomeHandler)
 
 	// Public endpoints
 	router.POST("/auth/login", LoginHandler)
@@ -45,14 +41,14 @@ func SetupRouter(db *sql.DB, cfg *config.Config, logger *zap.Logger) *gin.Engine
 		authGroup.DELETE("/objects/:bucketID/:objectID/:versionID", DeleteObjectByVersionHandler)
 		authGroup.DELETE("/objects/:bucketID/:objectID", DeleteObjectHandler)
 
-		/* authGroup.GET("/objects/:bucketID/:objectID/:versionID", CheckFileIntegrityHandler)
-		authGroup.GET("/objects/:bucketID/:objectID", GetStorageAnalyticsHandler)
-		authGroup.GET("/objects/:bucketID/:objectID", GetStorageInfoHandler) */
+		authGroup.GET("/objects/:bucketID/:objectID/version/:versionID/integrity", CheckFileIntegrityHandler)
+		authGroup.GET("/objects/:bucketID/:objectID/analytics", GetStorageAnalyticsHandler)
+		authGroup.GET("/objects/:bucketID/:objectID/info", GetStorageInfoHandler)
 	}
 
-	// ACL and RBAC protected endpoints
+	// ACL endpoints
 	aclGroup := router.Group("/acl")
-	aclGroup.Use(auth.JWTMiddleware(), acl.RBACMiddleware("admin"))
+	aclGroup.Use(auth.JWTMiddleware())
 	{
 		aclGroup.POST("/permissions", AddPermissionHandler)
 		aclGroup.GET("/permissions", ListPermissionsHandler)

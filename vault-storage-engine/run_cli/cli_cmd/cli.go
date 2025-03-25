@@ -37,6 +37,13 @@ func RunCli() {
 				},
 			},
 			{
+				Name:  "get-bucket",
+				Usage: "Get a bucket by ID Usage: get-bucket <bucket-id>",
+				Action: func(c *cli.Context) error {
+					return bucket_cli.GetBucketCommand(c, db)
+				},
+			},
+			{
 				Name:  "store-object",
 				Usage: "Store objects in valid buckets. Usage: store-object <bucket_id> <file_path>",
 				Action: func(c *cli.Context) error {
@@ -95,14 +102,6 @@ func RunCli() {
 		},
 	}
 
-	/* r := api.SetupRouter(db) */
-
-	/* go func() {
-		if err := r.Run(cfg.ServerAddress); err != nil {
-			log.Fatalf("Failed to run server: %v", err)
-		}
-	}()
-	*/
 	if err := app.Run(os.Args); err != nil {
 		logger.Fatal("CLI failed", zap.Error(err))
 	}

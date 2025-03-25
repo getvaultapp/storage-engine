@@ -10,11 +10,12 @@ import (
 
 // Config holds the configuration settings
 type Config struct {
-	ServerAddress      string `yaml:"server_address"`
-	ShardStoreBasePath string `yaml:"shard_store_base_path"`
-	EncryptionKey      []byte `yaml:"-"`
-	EncryptionKeyHex   string `yaml:"encryption_key"`
-	Database           string `yaml:"database"`
+	ServerAddress      string   `yaml:"server_address"`
+	ShardStoreBasePath string   `yaml:"shard_store_base_path"`
+	EncryptionKey      []byte   `yaml:"-"`
+	EncryptionKeyHex   string   `yaml:"encryption_key"`
+	Database           string   `yaml:"db"`
+	ShardLocations     []string `yaml:"shardLocations"`
 }
 
 // LoadConfig loads the configuration from a YAML file
