@@ -32,6 +32,7 @@ func ListObjectsHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"bucket_id": bucketID, "objects": objects})
 }
 
+// Store a file and upload it into a bucket along with it's own versionID
 func UploadObjectHandler(c *gin.Context) {
 	bucketID := c.Param("bucketID")
 
@@ -79,6 +80,7 @@ func UploadObjectHandler(c *gin.Context) {
 	})
 }
 
+// Download an object, this should retrieve the latest version of an object
 func GetObjectHandler(c *gin.Context) {
 	bucketID := c.Param("bucketID")
 	objectID := c.Param("objectID")
@@ -116,6 +118,7 @@ func GetObjectHandler(c *gin.Context) {
 	c.FileAttachment(tmpFile.Name(), filename)
 }
 
+// Download a particular version of an object
 func GetObjectByVersionHandler(c *gin.Context) {
 	bucketID := c.Param("bucketID")
 	objectID := c.Param("objectID")
@@ -147,6 +150,7 @@ func GetObjectByVersionHandler(c *gin.Context) {
 	c.FileAttachment(tmpFile.Name(), filename)
 }
 
+// This stores a nw version of an object, it'll give it a new version
 func UpdateObjectVersionHandler(c *gin.Context) {
 	bucketID := c.Param("bucketID")
 	objectID := c.Param("objectID")
@@ -193,6 +197,7 @@ func UpdateObjectVersionHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Object updated successfully", "bucket_id": bucketID, "object_id": objectID, "version _id": versionID})
 }
 
+// Deletes all versions of an object ... This isn't really working well yet
 func DeleteObjectHandler(c *gin.Context) {
 	bucketID := c.Param("bucketID")
 	objectID := c.Param("objectID")
@@ -212,6 +217,7 @@ func DeleteObjectHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Object deleted successfully", "bucket_id": bucketID, "object_id": objectID})
 }
 
+// This deletes a particular version of an object
 func DeleteObjectByVersionHandler(c *gin.Context) {
 	bucketID := c.Param("bucketID")
 	objectID := c.Param("objectID")

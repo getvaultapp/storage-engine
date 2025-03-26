@@ -9,8 +9,10 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func SetBucketPermissionsHandler(c *gin.Context, db *sql.DB) {
+func SetBucketPermissionsHandler(c *gin.Context) {
 	bucketID := c.Param("bucket_id")
+
+	db := c.MustGet("db").(*sql.DB)
 
 	var req struct {
 		Read  []string `json:"read"`

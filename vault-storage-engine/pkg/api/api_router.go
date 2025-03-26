@@ -38,6 +38,8 @@ func SetupRouter(db *sql.DB, cfg *config.Config, logger *zap.Logger) *gin.Engine
 		authGroup.GET("/objects/:bucketID/:objectID", GetObjectHandler)
 		authGroup.GET("/objects/:bucketID/:objectID/:versionID", GetObjectByVersionHandler)
 		authGroup.POST("/objects/:bucketID/:objectID/update", UpdateObjectVersionHandler)
+		authGroup.GET("/objects/:bucketID/:objectID/versions", ListVersionsHandler)
+		authGroup.GET("/objects/:bucketID/:objectID/:versionID/retrieve", RetrieveVersionHandler)
 		authGroup.DELETE("/objects/:bucketID/:objectID/:versionID", DeleteObjectByVersionHandler)
 		authGroup.DELETE("/objects/:bucketID/:objectID", DeleteObjectHandler)
 
@@ -50,7 +52,8 @@ func SetupRouter(db *sql.DB, cfg *config.Config, logger *zap.Logger) *gin.Engine
 	aclGroup := router.Group("/acl")
 	aclGroup.Use(auth.JWTMiddleware())
 	{
-		aclGroup.POST("/permissions", AddPermissionHandler)
+		aclGroup.POST("/permissions/set", SetBucketPermissionsHandler)
+		aclGroup.POST("/permissions/add", AddPermissionHandler)
 		aclGroup.GET("/permissions", ListPermissionsHandler)
 		aclGroup.POST("/permissions/:objectID", AddObjectPermissionHandler)
 		aclGroup.POST("/groups", CreateGroupHandler)
