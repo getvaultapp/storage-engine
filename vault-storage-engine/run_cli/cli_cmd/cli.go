@@ -44,6 +44,13 @@ func RunCli() {
 				},
 			},
 			{
+				Name:  "list-objects",
+				Usage: "List all objects in a bucket. Usage list-objects <bucket-id>",
+				Action: func(c *cli.Context) error {
+					return bucket_cli.ListObjectCommand(c, db, cfg, logger)
+				},
+			},
+			{
 				Name:  "store-object",
 				Usage: "Store objects in valid buckets. Usage: store-object <bucket_id> <file_path>",
 				Action: func(c *cli.Context) error {

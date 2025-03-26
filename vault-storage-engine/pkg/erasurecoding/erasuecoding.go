@@ -6,6 +6,11 @@ import (
 	"github.com/klauspost/reedsolomon"
 )
 
+type ErasureCode interface {
+	Encode(data []byte) ([][]byte, error)
+	Decode(shards [][]byte) ([]byte, error)
+}
+
 var (
 	DataShards   = 4
 	ParityShards = 2

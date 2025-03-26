@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"log"
 
 	"github.com/google/uuid"
 )
@@ -31,6 +30,34 @@ type VersionMetadata struct {
 	Proofs         map[string]string `json:"proofs"`
 }
 
+// ObjectType represents a miniature singleton of an object
+type ObjectType struct {
+	ObjectID      string
+	Filename      string
+	LatestVersion string
+}
+
+// ListObjects lists all objects in a bucket
+func ListObjects(db *sql.DB, bucketID string) ([]ObjectType, error) {
+	query := "SELECT id, filename, latest_version FROM objects WHERE bucket_id = $1"
+	rows, err := db.Query(query, bucketID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var objects []ObjectType
+	for rows.Next() {
+		var object ObjectType
+		if err := rows.Scan(&object.ObjectID, &object.Filename, &object.LatestVersion); err != nil {
+			return nil, err
+		}
+		objects = append(objects, object)
+	}
+
+	return objects, nil
+}
+
 // AddObject adds an object to the database if it doesn't already exist
 func AddObject(db *sql.DB, bucketID, objectID, filename string) error {
 	var objectExists bool
@@ -42,18 +69,18 @@ func AddObject(db *sql.DB, bucketID, objectID, filename string) error {
 
 	if objectExists {
 		latest_version_id := GetLatestVersion(db, objectID)
-
 		query := "UPDATE objects SET latest_version = ? WHERE id = ? AND bucket_id = ? AND filename = ?"
 		_, err = db.Exec(query, latest_version_id, objectID, bucketID, filename)
 		if err != nil {
 			return fmt.Errorf("failed to update object version, %s", err)
 		}
-
 		return nil
 	}
 
-	query = "INSERT INTO objects (id, bucket_id, filename) VALUES (?, ?, ?)"
-	_, err = db.Exec(query, objectID, bucketID, filename)
+	latest_version_id := GetLatestVersion(db, objectID)
+
+	query = "INSERT INTO objects (id, bucket_id, filename, latest_version) VALUES (?, ?, ?, ?)"
+	_, err = db.Exec(query, objectID, bucketID, filename, latest_version_id)
 	if err != nil {
 		return fmt.Errorf("failed to add object: %w", err)
 	}
@@ -81,7 +108,7 @@ func AddVersion(db *sql.DB, bucketID, objectID, versionID, rootVersion string, m
 
 	latest_version_id := GetLatestVersion(db, objectID)
 
-	// Update the latest version for the object
+	// Set latest_version as current version
 	updateQuery := `UPDATE objects SET latest_version = ? WHERE id = ?`
 	_, err = db.Exec(updateQuery, latest_version_id, objectID)
 	if err != nil {
@@ -154,8 +181,6 @@ func GetLatestVersion(db *sql.DB, objectID string) string {
 		}
 		return ""
 	}
-
-	log.Println(latestVersionID)
 
 	return latestVersionID
 }

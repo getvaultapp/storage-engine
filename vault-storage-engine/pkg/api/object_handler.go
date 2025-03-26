@@ -23,7 +23,7 @@ func ListObjectsHandler(c *gin.Context) {
 
 	db := c.MustGet("db").(*sql.DB)
 
-	objects, err := datastorage.ListObjects(db, bucketID)
+	objects, err := bucket.ListObjects(db, bucketID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list objects"})
 		return

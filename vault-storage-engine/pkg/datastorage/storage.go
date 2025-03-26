@@ -20,31 +20,10 @@ import (
 	"go.uber.org/zap"
 )
 
-type Object struct {
-	ObjectID string
-	Name     string
-	Version  string
-}
-
-// ListObjects lists all objects in a bucket
-func ListObjects(db *sql.DB, bucketID string) ([]Object, error) {
-	query := "SELECT object_id, name, version FROM objects WHERE bucket_id = $1"
-	rows, err := db.Query(query, bucketID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var objects []Object
-	for rows.Next() {
-		var object Object
-		if err := rows.Scan(&object.ObjectID, &object.Name, &object.Version); err != nil {
-			return nil, err
-		}
-		objects = append(objects, object)
-	}
-
-	return objects, nil
+type Storage interface {
+	StoreData(db *sql.DB, data []byte, bucketID, objectID, filePath string, store sharding.ShardStore, cfg *config.Config, locations []string, logger *zap.Logger) (string, map[string]string, []string, error)
+	RetrieveData(db *sql.DB, bucketID, objectID, versionID string, store sharding.ShardStore, cfg *config.Config, logger *zap.Logger) ([]byte, string, error)
+	StoreDataWithVersion(db *sql.DB, data []byte, bucketID, objectID, versionID, filePath string, store sharding.ShardStore, cfg *config.Config, locations []string, logger *zap.Logger) (string, map[string]string, []string, error)
 }
 
 // StoreData stores an object inside a bucket
@@ -121,7 +100,7 @@ func StoreData(db *sql.DB, data []byte, bucketID, objectID, filePath string, sto
 		proofs = append(proofs, proof)
 	}
 
-	// Save object metadata in SQLite
+	// Save object metadata in JSON
 	metadata := bucket.VersionMetadata{
 		BucketID:       bucketID,
 		ObjectID:       objectID,
