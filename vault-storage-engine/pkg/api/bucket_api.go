@@ -2,6 +2,7 @@ package api
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
 	"net/http"
 
@@ -41,7 +42,11 @@ func CreateBucketHandler(c *gin.Context) {
 	db := c.MustGet("db").(*sql.DB)
 
 	err := bucket.CreateBucket(db, createRequest.BucketID, createRequest.OwnerID)
+	fmt.Println(createRequest.BucketID)
+	fmt.Println(createRequest.OwnerID)
+
 	if err != nil {
+		fmt.Println(err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create bucket"})
 		return
 	}

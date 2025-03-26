@@ -3,14 +3,13 @@ package bucket
 import (
 	"database/sql"
 	"fmt"
-	"time"
 )
 
 // Bucket represents a storage bucket
 type Bucket struct {
-	ID        string
-	Owner     string
-	CreatedAt time.Time
+	ID    string
+	Owner string
+	//CreatedAt time.Time
 }
 
 // CreateBucket inserts a new bucket into the database
@@ -28,10 +27,10 @@ func CreateBucket(db *sql.DB, bucketID string, owner string) error {
 		return nil
 	}
 
-	time := time.Now().Format(time.RFC3339)
+	//time := time.Now().Format(time.RFC3339)
 
-	query = `INSERT INTO buckets (bucket_id, owner, created_at) VALUES (?, ?, ?)`
-	_, err = db.Exec(query, bucketID, owner, time)
+	query = `INSERT INTO buckets (bucket_id, owner) VALUES (?, ?)`
+	_, err = db.Exec(query, bucketID, owner)
 	if err != nil {
 		return fmt.Errorf("failed to create bucket: %w", err)
 	}
@@ -46,7 +45,7 @@ func GetBucket(db *sql.DB, bucketID string) (*Bucket, error) {
 	row := db.QueryRow(query, bucketID)
 
 	var bucket Bucket
-	err := row.Scan(&bucket.ID, &bucket.Owner, &bucket.CreatedAt)
+	err := row.Scan(&bucket.ID, &bucket.Owner)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("bucket not found")

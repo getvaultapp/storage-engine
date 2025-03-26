@@ -13,6 +13,7 @@ type User struct {
 	Password string `json:"-"`
 }
 
+// Hashes the password with bycrpt for database injection
 func (u *User) HashPassword(password string) error {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {

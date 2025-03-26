@@ -48,8 +48,7 @@ func initializeSchema(db *sql.DB) error {
 	CREATE TABLE IF NOT EXISTS buckets (
 		id TEXT PRIMARY KEY,
 		bucket_id TEXT NOT NULL,
-		owner TEXT NOT NULL,
-		created_at TEXT NOT NULL
+		owner TEXT NOT NULL
 	);
 	CREATE TABLE IF NOT EXISTS objects (
 		id TEXT PRIMARY KEY,

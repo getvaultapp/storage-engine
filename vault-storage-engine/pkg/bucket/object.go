@@ -144,6 +144,7 @@ func GetRootVersion(db *sql.DB, objectID string) (string, error) {
 	return rootVersion, nil
 }
 
+// Remove object from database
 func DeleteObject(db *sql.DB, bucketID, objectID string) error {
 	// Remove the object versions
 	query := "DELETE FROM versions WHERE object_id = ?"

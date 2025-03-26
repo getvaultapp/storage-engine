@@ -204,6 +204,7 @@ func DeleteObjectHandler(c *gin.Context) {
 	store := sharding.NewLocalShardStore(cfg.ShardStoreBasePath)
 	err := datastorage.DeleteObject(db, bucketID, objectID, "all", store, logger)
 	if err != nil {
+		fmt.Println(err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete object"})
 		return
 	}
@@ -223,6 +224,7 @@ func DeleteObjectByVersionHandler(c *gin.Context) {
 	store := sharding.NewLocalShardStore(cfg.ShardStoreBasePath)
 	err := datastorage.DeleteObjectByVersion(db, bucketID, objectID, versionID, store, logger)
 	if err != nil {
+		fmt.Println(err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete object version"})
 		return
 	}
