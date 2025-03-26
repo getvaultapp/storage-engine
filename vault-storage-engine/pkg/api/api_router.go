@@ -39,7 +39,8 @@ func SetupRouter(db *sql.DB, cfg *config.Config, logger *zap.Logger) *gin.Engine
 		authGroup.GET("/objects/:bucketID/:objectID/:versionID", GetObjectByVersionHandler)
 		authGroup.POST("/objects/:bucketID/:objectID/update", UpdateObjectVersionHandler)
 		authGroup.GET("/objects/:bucketID/:objectID/versions", ListVersionsHandler)
-		authGroup.GET("/objects/:bucketID/:objectID/:versionID/retrieve", RetrieveVersionHandler)
+		authGroup.GET("/objects/:bucketID/:objectID/:versionID/metadata", RetrieveVersionHandler)
+		authGroup.GET("/objects/:bucketID/:objectID/:versionID/download-metadata", DownloadMetadata)
 		authGroup.DELETE("/objects/:bucketID/:objectID/:versionID", DeleteObjectByVersionHandler)
 		authGroup.DELETE("/objects/:bucketID/:objectID", DeleteObjectHandler)
 

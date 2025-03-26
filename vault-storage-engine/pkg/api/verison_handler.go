@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"net/http"
+	"os"
 
 	"github.com/getvaultapp/storage-engine/vault-storage-engine/pkg/bucket"
 	"github.com/gin-gonic/gin"
@@ -50,4 +51,27 @@ func RetrieveVersionHandler(c *gin.Context) {
 		"proofs":          objectMetadata.Proofs})
 }
 
-func DownloadMetadata(c *gin.Context) {}
+func DownloadMetadata(c *gin.Context) {
+	bucketID := c.Param("bucketID")
+	objectID := c.Param("objectID")
+	versionID := c.Param("versionID")
+
+	db := c.MustGet("db").(*sql.DB)
+
+	metadatafilename := fmt.Sprintf("%s-%s-%s.metadata.json", bucketID, objectID, versionID)
+
+	err := bucket.ReadMetadataJson(db, bucketID, objectID, versionID, metadatafilename)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve metadata for object"})
+		return
+	}
+
+	tmpFile, err := os.CreateTemp("", "object-*")
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create temporary file"})
+		return
+	}
+	defer tmpFile.Close()
+
+	c.FileAttachment(tmpFile.Name(), metadatafilename)
+}

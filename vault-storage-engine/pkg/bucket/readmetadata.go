@@ -7,11 +7,11 @@ import (
 	"os"
 )
 
-func ReadMetadataJson(bucketID, objectID, versionID string, filename string) error {
-	db, err := sql.Open("sqlite3", "./metadata.db")
-	if err != nil {
+func ReadMetadataJson(db *sql.DB, bucketID, objectID, versionID string, filename string) error {
+	//db, err := sql.Open("sqlite3", "./metadata.db")
+	/* if err != nil {
 		return fmt.Errorf("failed to open metadata database, %w", err)
-	}
+	} */
 	defer db.Close()
 
 	query := `SELECT metadata FROM versions WHERE bucket_id = ? AND object_id = ? AND version_id = ?`

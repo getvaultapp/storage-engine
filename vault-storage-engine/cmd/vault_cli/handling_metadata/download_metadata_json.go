@@ -19,7 +19,7 @@ func ReadMetadataJsonCommand(c *cli.Context, db *sql.DB) error {
 
 	filename := objectID + "-" + version + "-metadata.json"
 
-	err := bucket.ReadMetadataJson(bucketID, objectID, version, filename)
+	err := bucket.ReadMetadataJson(db, bucketID, objectID, version, filename)
 	if err != nil {
 		return fmt.Errorf("failed to create new bucket, %w", err)
 	}
