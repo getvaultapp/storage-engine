@@ -114,6 +114,34 @@ func GetObjectMetadata(db *sql.DB, objectID, versionID string) (*VersionMetadata
 	return &metadata, nil
 }
 
+func GetObjectMetadataAllVersions(db *sql.DB, objectID string) (map[string]VersionMetadata, error) {
+	query := `SELECT version_id, metadata FROM versions WHERE object_id = ?`
+	rows, err := db.Query(query, objectID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve metadata, %w", err)
+	}
+	defer rows.Close()
+
+	metadata := make(map[string]VersionMetadata)
+	for rows.Next() {
+		var versionID string
+		var metadataJSON string
+		err := rows.Scan(&versionID, &metadataJSON)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan metadata %w", err)
+		}
+
+		var objectMetadata VersionMetadata
+		err = json.Unmarshal([]byte(metadataJSON), &objectMetadata)
+		if err != nil {
+			return nil, fmt.Errorf("failed to unmarshal metadata, %w", err)
+		}
+		metadata[versionID] = objectMetadata
+	}
+
+	return metadata, nil
+}
+
 // Pls review this, I believe we can still optimize it better
 func GetLatestVersion(db *sql.DB, objectID string) string {
 	query := `SELECT version_id FROM versions WHERE object_id = ? ORDER BY version_id DESC LIMIT 1`

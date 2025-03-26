@@ -80,7 +80,7 @@ func RunCli() {
 			},
 			{
 				Name:  "delete-object",
-				Usage: "Deletes an all versions of an object. Usage: delete-object <bucket_id> <object_id> <initial_object_id>",
+				Usage: "Deletes an all versions of an object. Usage: delete-object <bucket_id> <object_id>",
 				Action: func(c *cli.Context) error {
 					return object_cli.DeleteObject(c, db, cfg, logger)
 				},

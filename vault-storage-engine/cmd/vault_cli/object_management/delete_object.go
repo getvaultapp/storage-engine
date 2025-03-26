@@ -12,21 +12,20 @@ import (
 )
 
 func DeleteObject(c *cli.Context, db *sql.DB, cfg *config.Config, logger *zap.Logger) error {
-	if c.NArg() != 3 {
-		return fmt.Errorf("usage: delete-object <bucket_id> <object_id> <initial_version_id>")
+	if c.NArg() != 2 {
+		return fmt.Errorf("usage: delete-object <bucket_id> <object_id>")
 	}
 
 	bucketID := c.Args().Get(0)
 	objectID := c.Args().Get(1)
-	versionID := c.Args().Get(2)
 
 	store := sharding.NewLocalShardStore(cfg.ShardStoreBasePath)
-	err := datastorage.DeleteObject(db, bucketID, objectID, versionID, store, logger)
+	err := datastorage.DeleteObject(db, bucketID, objectID, store, logger)
 	if err != nil {
 		return fmt.Errorf("failed to delete object")
 	}
 
-	fmt.Printf("Successfully deleted object %s version (%s)\n", objectID, versionID)
+	fmt.Printf("Successfully deleted all versions of object %s\n", objectID)
 
 	return nil
 }

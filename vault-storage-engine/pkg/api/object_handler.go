@@ -207,7 +207,7 @@ func DeleteObjectHandler(c *gin.Context) {
 	logger := c.MustGet("logger").(*zap.Logger)
 
 	store := sharding.NewLocalShardStore(cfg.ShardStoreBasePath)
-	err := datastorage.DeleteObject(db, bucketID, objectID, "all", store, logger)
+	err := datastorage.DeleteObject(db, bucketID, objectID, store, logger)
 	if err != nil {
 		fmt.Println(err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete object"})
