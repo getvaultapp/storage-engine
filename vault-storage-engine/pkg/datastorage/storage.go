@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/getvaultapp/storage-engine/vault-storage-engine/pkg/bucket"
+	"github.com/getvaultapp/storage-engine/vault-storage-engine/pkg/compression"
 	"github.com/getvaultapp/storage-engine/vault-storage-engine/pkg/config"
 	"github.com/getvaultapp/storage-engine/vault-storage-engine/pkg/encryption"
 	"github.com/getvaultapp/storage-engine/vault-storage-engine/pkg/erasurecoding"
@@ -70,9 +71,15 @@ func StoreData(db *sql.DB, data []byte, bucketID, objectID, filePath string, sto
 	// Generate unique version ID
 	versionID := uuid.New().String()
 
+	// Compress data
+	compressedData, err := compression.Compress(data)
+	if err != nil {
+		return "", nil, nil, fmt.Errorf("compression failed, %w", err)
+	}
+
 	// Encrypt compressed data
 	key := cfg.EncryptionKey
-	cipherText, err := encryption.Encrypt(data, key)
+	cipherText, err := encryption.Encrypt(compressedData, key)
 	if err != nil {
 		return "", nil, nil, fmt.Errorf("encryption failed: %w", err)
 	}
@@ -199,7 +206,13 @@ func RetrieveData(db *sql.DB, bucketID, objectID, versionID string, store shardi
 		return nil, "", fmt.Errorf("decryption failed: %w", err)
 	}
 
-	plainText := data
+	// Decompress encrypted data
+	plainText, err := compression.Decompress(data)
+	if err != nil {
+		return nil, "", fmt.Errorf("decompression failed: %w", err)
+	}
+
+	//plainText := data
 
 	// Fetch filename from the database
 	var filename string
@@ -229,9 +242,15 @@ func StoreDataWithVersion(db *sql.DB, data []byte, bucketID, objectID, versionID
 		return "", nil, nil, fmt.Errorf("bucket %s does not exists", bucketID)
 	}
 
+	// Compress data
+	compressedData, err := compression.Compress(data)
+	if err != nil {
+		return "", nil, nil, fmt.Errorf("compression failed, %w", err)
+	}
+
 	// Encrypt compressed data
 	key := cfg.EncryptionKey
-	cipherText, err := encryption.Encrypt(data, key)
+	cipherText, err := encryption.Encrypt(compressedData, key)
 	if err != nil {
 		return "", nil, nil, fmt.Errorf("encryption failed: %w", err)
 	}
