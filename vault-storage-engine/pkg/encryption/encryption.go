@@ -1,7 +1,6 @@
 package encryption
 
 import (
-	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
@@ -9,43 +8,54 @@ import (
 	"io"
 )
 
-// Encrypt encrypts data using AES
+// Encryptor inerface for encryption
+type Encryptor interface {
+	Encrypt(data []byte, key []byte) ([]byte, error)
+	Decrypt(data []byte, key []byte) ([]byte, error)
+}
+
+// Encrypt uses AES-GCM algorithm to properly encrypt data
 func Encrypt(data, key []byte) ([]byte, error) {
 	block, err := aes.NewCipher(key)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create cipher: %w", err)
+		return nil, fmt.Errorf("failed to create new cipher key, %w", err)
 	}
 
-	ciphertext := make([]byte, aes.BlockSize+len(data))
-	iv := ciphertext[:aes.BlockSize]
-	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
-		return nil, fmt.Errorf("failed to generate IV: %w", err)
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create block cipher, %w", err)
+	}
+	nonce := make([]byte, gcm.NonceSize())
+	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
+		return nil, err
 	}
 
-	stream := cipher.NewCFBEncrypter(block, iv)
-	stream.XORKeyStream(ciphertext[aes.BlockSize:], data)
-
+	ciphertext := gcm.Seal(nonce, nonce, data, nil)
 	return ciphertext, nil
 }
 
-// Decrypt decrypts data using AES
+// Decrypt decrypts data using AES-GCM algorithm
 func Decrypt(data, key []byte) ([]byte, error) {
 	block, err := aes.NewCipher(key)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create cipher: %w", err)
+		return nil, fmt.Errorf("failed to create new cipher key, %w", err)
 	}
 
-	if len(data) < aes.BlockSize {
-		return nil, fmt.Errorf("ciphertext too short")
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create block cipher, %w", err)
 	}
 
-	iv := data[:aes.BlockSize]
-	ciphertext := data[aes.BlockSize:]
+	nonceSize := gcm.NonceSize()
+	if len(data) < nonceSize {
+		return nil, io.ErrUnexpectedEOF
+	}
 
-	stream := cipher.NewCFBDecrypter(block, iv)
-	stream.XORKeyStream(ciphertext, ciphertext)
+	nonce, ciphertext := data[:nonceSize], data[nonceSize:]
+	plaintext, err := gcm.Open(nil, nonce, ciphertext, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decrypt data, %w", err)
+	}
 
-	//return ciphertext, nil
-
-	return bytes.Trim(ciphertext, "\x00"), nil
+	return plaintext, nil
 }
