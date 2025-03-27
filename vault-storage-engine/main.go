@@ -1,8 +1,6 @@
 package main
 
-import (
-	vault_cli "github.com/getvaultapp/storage-engine/vault-storage-engine/run_cli/cli_cmd"
-)
+import vault_cli "github.com/getvaultapp/storage-engine/vault-storage-engine/run_cli/cli_cmd"
 
 func main() {
 	// Set up logger

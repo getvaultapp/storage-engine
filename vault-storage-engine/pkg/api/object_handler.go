@@ -29,7 +29,10 @@ func ListObjectsHandler(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"bucket_id": bucketID, "objects": objects})
+	for _, object := range objects {
+		c.JSON(http.StatusOK, gin.H{"bucket_id": bucketID, "objects": object})
+	}
+	//c.JSON(http.StatusOK, gin.H{"bucket_id": bucketID, "objects": objects})
 }
 
 // Store a file and upload it into a bucket along with it's own versionID
