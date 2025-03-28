@@ -2,15 +2,19 @@ package models
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
+	"time"
 
 	"golang.org/x/crypto/bcrypt"
 )
 
 type User struct {
-	ID       int    `json:"id"`
-	Username string `json:"username"`
-	Password string `json:"-"`
+	ID        int       `json:"id"`
+	Username  string    `json:"username"`
+	Email     string    `json:"email"`
+	Password  string    `json:"-"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 // Hashes the password with bycrpt for database injection
@@ -41,10 +45,25 @@ func GetUserByUsername(db *sql.DB, username string) (*User, error) {
 	return &user, nil
 }
 
+func GetUserByEmail(db *sql.DB, email string) (*User, error) {
+	query := "SELECT id, email, password FROM users WHERE email = ?"
+	row := db.QueryRow(query, email)
+
+	var user User
+	if err := row.Scan(&user.ID, &user.Email, &user.Password); err != nil {
+		log.Printf("failed to get username, %v", err)
+		return nil, err
+	}
+
+	return &user, nil
+}
+
 func CreateUser(db *sql.DB, user *User) error {
-	query := "INSERT INTO users (username, password) VALUES (?, ?)"
-	_, err := db.Exec(query, user.Username, user.Password)
+	time := time.Now().Format(time.RFC3339)
+	query := "INSERT INTO users (username, email, password, created_at) VALUES (?, ?, ?, ?)"
+	_, err := db.Exec(query, user.Username, user.Email, user.Password, time)
 	if err != nil {
+		fmt.Println(err)
 		return err
 	}
 

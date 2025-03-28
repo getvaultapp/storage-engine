@@ -17,11 +17,12 @@ func InitJWTSecret() {
 
 // GenerateJWT creates a JWT for a user
 
-func GenerateJWT(userID, role string) (string, error) {
+func GenerateJWT(userID, Emai, role string) (string, error) {
 	claims := jwt.MapClaims{
-		"user_id": userID,
-		"role":    role,
-		"exp":     time.Now().Add(time.Hour * 24).Unix(), // Expires in 24h
+		"username": userID,
+		"email":    Emai,
+		"role":     role,
+		"exp":      time.Now().Add(time.Hour * 48).Unix(), // Expires in 24h
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)

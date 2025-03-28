@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/getvaultapp/storage-engine/vault-storage-engine/pkg/auth"
 	"github.com/getvaultapp/storage-engine/vault-storage-engine/pkg/bucket"
 	"github.com/getvaultapp/storage-engine/vault-storage-engine/pkg/config"
 	"github.com/getvaultapp/storage-engine/vault-storage-engine/pkg/datastorage"
@@ -29,21 +30,26 @@ func ListBucketsHandler(c *gin.Context) {
 }
 
 func CreateBucketHandler(c *gin.Context) {
+	db := c.MustGet("db").(*sql.DB)
+
 	var createRequest struct {
 		BucketID string `json:"bucket_id" binding:"required"`
-		OwnerID  string `json:"owner_id" binding:"required"`
 	}
+
+	// Get the user email to get the username and append it automatically to owner section
+	token, err := auth.GetTokenFromRequest(c)
+	if err != nil {
+		fmt.Printf("error getting token, %v", err)
+	}
+
+	username, _ := auth.GetUsernameFromEmail(c, token)
 
 	if err := c.ShouldBindJSON(&createRequest); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
 		return
 	}
 
-	db := c.MustGet("db").(*sql.DB)
-
-	err := bucket.CreateBucket(db, createRequest.BucketID, createRequest.OwnerID)
-	fmt.Println(createRequest.BucketID)
-	fmt.Println(createRequest.OwnerID)
+	err = bucket.CreateBucket(db, createRequest.BucketID, username)
 
 	if err != nil {
 		fmt.Println(err)

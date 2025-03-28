@@ -28,10 +28,11 @@ func CreateBucket(db *sql.DB, bucketID string, owner string) error {
 		return nil
 	}
 
+	// Update the time of creation
 	time := time.Now().Format(time.RFC3339)
 
-	query = `INSERT INTO buckets (id, bucket_id, owner) VALUES (?, ?, ?)`
-	_, err = db.Exec(query, time, bucketID, owner)
+	query = `INSERT INTO buckets (bucket_id, owner, created_at) VALUES (?, ?, ?)`
+	_, err = db.Exec(query, bucketID, owner, time)
 	if err != nil {
 		return fmt.Errorf("failed to create bucket: %w", err)
 	}
