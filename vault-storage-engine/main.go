@@ -6,6 +6,7 @@ import (
 	"github.com/getvaultapp/storage-engine/vault-storage-engine/pkg/api"
 	"github.com/getvaultapp/storage-engine/vault-storage-engine/pkg/bucket"
 	"github.com/getvaultapp/storage-engine/vault-storage-engine/pkg/config"
+	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )
 
@@ -31,6 +32,8 @@ func main() {
 
 	// Initialize the router
 	router := api.SetupRouter(db, cfg, logger)
+
+	gin.SetMode(gin.ReleaseMode)
 
 	// Start the server
 	if err := router.Run(cfg.ServerAddress); err != nil {
