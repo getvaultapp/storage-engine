@@ -61,7 +61,7 @@ func initializeSchema(db *sql.DB) error {
 		FOREIGN KEY (bucket_id) REFERENCES buckets(id)
 	);
 	CREATE TABLE IF NOT EXISTS versions (
-		id TEXT PRIMARY KEY,
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		object_id TEXT NOT NULL,
 		version_id TEXT NOT NULL,
 		bucket_id TEXT NOT NULL,
