@@ -3,7 +3,6 @@ package api
 import (
 	"database/sql"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -32,7 +31,9 @@ func ListObjectsHandler(c *gin.Context) {
 
 	authVerify, err := auth.VerifyBucketOwnership(c, db, bucketID, token)
 	if !authVerify {
-		log.Fatal(err)
+		fmt.Printf("verfying owner error: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "access denied:"})
+		return
 	}
 
 	objects, err := bucket.ListObjects(db, bucketID)
@@ -68,7 +69,9 @@ func UploadObjectHandler(c *gin.Context) {
 
 	authVerify, err := auth.VerifyBucketOwnership(c, db, bucketID, token)
 	if !authVerify {
-		log.Fatal(err)
+		fmt.Printf("verfying owner error: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "access denied:"})
+		return
 	}
 
 	// Save the uploaded file to a temporary location
@@ -123,7 +126,9 @@ func GetObjectHandler(c *gin.Context) {
 
 	authVerify, err := auth.VerifyBucketOwnership(c, db, bucketID, token)
 	if !authVerify {
-		log.Fatal(err)
+		fmt.Printf("verfying owner error: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "access denied:"})
+		return
 	}
 
 	// This should get the latest_version of the object
@@ -170,7 +175,9 @@ func GetObjectByVersionHandler(c *gin.Context) {
 
 	authVerify, err := auth.VerifyBucketOwnership(c, db, bucketID, token)
 	if !authVerify {
-		log.Fatal(err)
+		fmt.Printf("verfying owner error: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "access denied:"})
+		return
 	}
 
 	store := sharding.NewLocalShardStore(cfg.ShardStoreBasePath)
@@ -220,7 +227,9 @@ func UpdateObjectVersionHandler(c *gin.Context) {
 
 	authVerify, err := auth.VerifyBucketOwnership(c, db, bucketID, token)
 	if !authVerify {
-		log.Fatal(err)
+		fmt.Printf("verfying owner error: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "access denied:"})
+		return
 	}
 
 	getfile, versionID, err := bucket.UpdateFileVersionIfItExists(db, updateRequest.Filename, bucketID, objectID)
@@ -268,7 +277,9 @@ func DeleteObjectHandler(c *gin.Context) {
 
 	authVerify, err := auth.VerifyBucketOwnership(c, db, bucketID, token)
 	if !authVerify {
-		log.Fatal(err)
+		fmt.Printf("verfying owner error: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "access denied:"})
+		return
 	}
 
 	store := sharding.NewLocalShardStore(cfg.ShardStoreBasePath)
@@ -299,7 +310,9 @@ func DeleteObjectByVersionHandler(c *gin.Context) {
 
 	authVerify, err := auth.VerifyBucketOwnership(c, db, bucketID, token)
 	if !authVerify {
-		log.Fatal(err)
+		fmt.Printf("verfying owner error: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "access denied:"})
+		return
 	}
 
 	store := sharding.NewLocalShardStore(cfg.ShardStoreBasePath)

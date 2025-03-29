@@ -51,7 +51,11 @@ func CreateBucketHandler(c *gin.Context) {
 		fmt.Printf("error getting token, %v", err)
 	}
 
-	owner, _ := auth.GetUsernameFromEmail(c, token)
+	owner, err := auth.GetUsernameFromEmail(c, token)
+	if owner == "" || err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to create bucket, user does not exists"})
+		return
+	}
 
 	if err := c.ShouldBindJSON(&createRequest); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
@@ -81,9 +85,10 @@ func GetBucketHandler(c *gin.Context) {
 
 	authVerify, err := auth.VerifyBucketOwnership(c, db, bucketID, token)
 	if !authVerify {
-		log.Fatal(err)
+		fmt.Printf("verfying owner error: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "access denied:"})
+		return
 	}
-
 	bucket, err := bucket.GetBucket(db, bucketID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Bucket not found"})
@@ -107,7 +112,9 @@ func DeleteBucketHandler(c *gin.Context) {
 
 	authVerify, err := auth.VerifyBucketOwnership(c, db, bucketID, token)
 	if !authVerify {
-		log.Fatal(err)
+		fmt.Printf("verfying owner error: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "access denied:"})
+		return
 	}
 
 	store := sharding.NewLocalShardStore(cfg.ShardStoreBasePath)

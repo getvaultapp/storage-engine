@@ -42,37 +42,32 @@ func JWTMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		for _, claim := range claims {
-			fmt.Println(claim)
-		}
-
 		// Store claims in context
-		c.Set("useranme", claims["username"])
+		c.Set("username", claims["username"])
 		c.Set("email", claims["email"])
 		c.Set("role", claims["role"])
 		c.Next()
 	}
 }
 
-// GetUsernameFromToken extracts the username from a JWT token
+// GetEmailFromToken extracts the email from a JWT token
 func GetEmailFromToken(tokenString string) (string, error) {
 	// Parse the JWT token
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-		// Assuming you're using a secret key to sign the tokens
 		return []byte(viper.GetString("jwtSecret")), nil
 	})
 	if err != nil {
-		return "", fmt.Errorf("%v", err)
+		return "", fmt.Errorf("error parsing token: %v", err)
 	}
 
-	// Extract the username from the token claims
+	// Extract the email from the token claims
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok || !token.Valid {
 		return "", errors.New("invalid token")
 	}
 	email, ok := claims["email"].(string)
 	if !ok {
-		return "", errors.New("username not found in token")
+		return "", errors.New("email not found in token")
 	}
 
 	return email, nil
@@ -81,14 +76,12 @@ func GetEmailFromToken(tokenString string) (string, error) {
 func VerifyBucketOwnership(c *gin.Context, db *sql.DB, bucketID, tokenString string) (bool, error) {
 	// This should get the email from the token
 	email, err := GetEmailFromToken(tokenString)
-	println(email)
 	if err != nil {
 		return false, fmt.Errorf("failed to get email from token, %v", err)
 	}
 
 	// This should get the username from the email
 	username, err := GetUsernameFromEmail(c, email)
-	println(username)
 	if err != nil {
 		return false, fmt.Errorf("unable to get username from token: %w", err)
 	}
@@ -124,22 +117,18 @@ func GetTokenFromRequest(c *gin.Context) (string, error) {
 	return parts[1], nil
 }
 
-func GetUsernameFromEmail(c *gin.Context, token string) (string, error) {
+func GetUsernameFromEmail(c *gin.Context, email string) (string, error) {
 	db := c.MustGet("db").(*sql.DB)
-	email, err := GetEmailFromToken(token)
-	if err != nil {
-		fmt.Printf("failed to get useremail from token %v", err)
-	}
 
 	// I have a variable (string known as email), how do i query my DB to get the associated username with that email, they are both in table users
 	query := `SELECT username FROM users WHERE email = ?`
 	var username string
-	err = db.QueryRow(query, email).Scan(&username)
+	err := db.QueryRow(query, email).Scan(&username)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			fmt.Printf("")
+			return "", fmt.Errorf("no user found with email: %v", email)
 		}
-		fmt.Printf("failed to query database, %v", err)
+		return "", fmt.Errorf("failed to query database, %v", err)
 	}
 
 	return username, nil

@@ -2,6 +2,7 @@ package api
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
 	"net/http"
 
@@ -49,7 +50,8 @@ func LoginHandler(c *gin.Context) {
 		return
 	}
 
-	c.SetCookie("token", token, 48*3600, "/", "", false, true)
+	c.SetCookie("token", token, 24*3600, "/", "", false, true) // Cookie set to exists for 24 hours
+	fmt.Println("token saved as cookie")
 
 	c.JSON(http.StatusOK, gin.H{"token": token})
 }

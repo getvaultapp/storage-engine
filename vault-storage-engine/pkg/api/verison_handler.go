@@ -3,7 +3,6 @@ package api
 import (
 	"database/sql"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 
@@ -25,7 +24,9 @@ func ListVersionsHandler(c *gin.Context) {
 
 	authVerify, err := auth.VerifyBucketOwnership(c, db, bucketID, token)
 	if !authVerify {
-		log.Fatal(err)
+		fmt.Printf("verfying owner error: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "access denied:"})
+		return
 	}
 
 	versions, err := bucket.ListObjectVersions(db, objectID)
@@ -52,7 +53,9 @@ func RetrieveVersionHandler(c *gin.Context) {
 
 	authVerify, err := auth.VerifyBucketOwnership(c, db, bucketID, token)
 	if !authVerify {
-		log.Fatal(err)
+		fmt.Printf("verfying owner error: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "access denied:"})
+		return
 	}
 
 	objectMetadata, err := bucket.GetObjectMetadata(db, objectID, versionID)
@@ -88,9 +91,10 @@ func DownloadMetadata(c *gin.Context) {
 
 	authVerify, err := auth.VerifyBucketOwnership(c, db, bucketID, token)
 	if !authVerify {
-		log.Fatal(err)
+		fmt.Printf("verfying owner error: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "access denied:"})
+		return
 	}
-
 	metadatafilename := fmt.Sprintf("%s-%s-%s.metadata.json", bucketID, objectID, versionID)
 
 	err = bucket.ReadMetadataJson(db, bucketID, objectID, versionID, metadatafilename)
