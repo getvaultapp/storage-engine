@@ -80,7 +80,7 @@ func RunCli() {
 			},
 			{
 				Name:  "list-buckets",
-				Usage: "Lists all active buckets",
+				Usage: "Lists all active buckets for a specific user. Usage list-buckets <owner_id>",
 				Action: func(c *cli.Context) error {
 					return bucket_cli.ListBucketCommand(c, db, cfg, logger)
 				},

@@ -19,7 +19,16 @@ import (
 func ListBucketsHandler(c *gin.Context) {
 	db := c.MustGet("db").(*sql.DB)
 
-	buckets, err := bucket.ListAllBuckets(db)
+	token, err := auth.GetTokenFromRequest(c)
+	if err != nil {
+		fmt.Printf("failed to get token from request, %v", err)
+	}
+	owner, err := auth.GetUsernameFromEmail(c, token)
+	if err != nil {
+		fmt.Printf("failed to owner_id from token, %v", err)
+	}
+
+	buckets, err := bucket.ListAllBuckets(db, owner)
 	if err != nil {
 		log.Printf("Error listing buckets: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list buckets"})
@@ -42,14 +51,14 @@ func CreateBucketHandler(c *gin.Context) {
 		fmt.Printf("error getting token, %v", err)
 	}
 
-	username, _ := auth.GetUsernameFromEmail(c, token)
+	owner, _ := auth.GetUsernameFromEmail(c, token)
 
 	if err := c.ShouldBindJSON(&createRequest); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
 		return
 	}
 
-	err = bucket.CreateBucket(db, createRequest.BucketID, username)
+	err = bucket.CreateBucket(db, createRequest.BucketID, owner)
 
 	if err != nil {
 		fmt.Println(err)
@@ -64,6 +73,17 @@ func GetBucketHandler(c *gin.Context) {
 	bucketID := c.Param("bucketID")
 
 	db := c.MustGet("db").(*sql.DB)
+
+	token, err := auth.GetTokenFromRequest(c)
+	if err != nil {
+		fmt.Printf("failed to get token from request, %v", err)
+	}
+
+	authVerify, err := auth.VerifyBucketOwnership(c, db, bucketID, token)
+	if !authVerify {
+		log.Fatal(err)
+	}
+
 	bucket, err := bucket.GetBucket(db, bucketID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Bucket not found"})
@@ -80,9 +100,19 @@ func DeleteBucketHandler(c *gin.Context) {
 	cfg := c.MustGet("config").(*config.Config)
 	logger := c.MustGet("logger").(*zap.Logger)
 
+	token, err := auth.GetTokenFromRequest(c)
+	if err != nil {
+		fmt.Printf("failed to get token from request, %v", err)
+	}
+
+	authVerify, err := auth.VerifyBucketOwnership(c, db, bucketID, token)
+	if !authVerify {
+		log.Fatal(err)
+	}
+
 	store := sharding.NewLocalShardStore(cfg.ShardStoreBasePath)
 
-	err := datastorage.DeleteBucket(db, bucketID, store, logger)
+	err = datastorage.DeleteBucket(db, bucketID, store, logger)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete bucket"})
 		return

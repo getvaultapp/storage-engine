@@ -58,8 +58,9 @@ func GetBucket(db *sql.DB, bucketID string) (*Bucket, error) {
 	return &bucket, nil
 }
 
-func ListAllBuckets(db *sql.DB) ([]string, error) {
-	rows, err := db.Query("SELECT bucket_id FROM buckets")
+func ListAllBuckets(db *sql.DB, owner string) ([]string, error) {
+	query := `SELECT bucket_id FROM buckets WHERE owner = ?`
+	rows, err := db.Query(query, owner)
 	if err != nil {
 		return nil, fmt.Errorf("error reading row, %w", err)
 	}

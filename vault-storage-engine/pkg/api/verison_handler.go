@@ -3,9 +3,11 @@ package api
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 
+	"github.com/getvaultapp/storage-engine/vault-storage-engine/pkg/auth"
 	"github.com/getvaultapp/storage-engine/vault-storage-engine/pkg/bucket"
 	"github.com/gin-gonic/gin"
 )
@@ -15,6 +17,16 @@ func ListVersionsHandler(c *gin.Context) {
 	objectID := c.Param("objectID")
 
 	db := c.MustGet("db").(*sql.DB)
+
+	token, err := auth.GetTokenFromRequest(c)
+	if err != nil {
+		fmt.Printf("failed to get token from request, %v", err)
+	}
+
+	authVerify, err := auth.VerifyBucketOwnership(c, db, bucketID, token)
+	if !authVerify {
+		log.Fatal(err)
+	}
 
 	versions, err := bucket.ListObjectVersions(db, objectID)
 	if err != nil {
@@ -27,10 +39,21 @@ func ListVersionsHandler(c *gin.Context) {
 
 // Returns the metadata of an object version
 func RetrieveVersionHandler(c *gin.Context) {
+	bucketID := c.Param("bucketID")
 	objectID := c.Param("objectID")
 	versionID := c.Param("versionID")
 
 	db := c.MustGet("db").(*sql.DB)
+
+	token, err := auth.GetTokenFromRequest(c)
+	if err != nil {
+		fmt.Printf("failed to get token from request, %v", err)
+	}
+
+	authVerify, err := auth.VerifyBucketOwnership(c, db, bucketID, token)
+	if !authVerify {
+		log.Fatal(err)
+	}
 
 	objectMetadata, err := bucket.GetObjectMetadata(db, objectID, versionID)
 	fmt.Println(err)
@@ -58,9 +81,19 @@ func DownloadMetadata(c *gin.Context) {
 
 	db := c.MustGet("db").(*sql.DB)
 
+	token, err := auth.GetTokenFromRequest(c)
+	if err != nil {
+		fmt.Printf("failed to get token from request, %v", err)
+	}
+
+	authVerify, err := auth.VerifyBucketOwnership(c, db, bucketID, token)
+	if !authVerify {
+		log.Fatal(err)
+	}
+
 	metadatafilename := fmt.Sprintf("%s-%s-%s.metadata.json", bucketID, objectID, versionID)
 
-	err := bucket.ReadMetadataJson(db, bucketID, objectID, versionID, metadatafilename)
+	err = bucket.ReadMetadataJson(db, bucketID, objectID, versionID, metadatafilename)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve metadata for object"})
 		return

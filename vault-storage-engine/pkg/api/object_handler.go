@@ -3,10 +3,12 @@ package api
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
 
+	"github.com/getvaultapp/storage-engine/vault-storage-engine/pkg/auth"
 	"github.com/getvaultapp/storage-engine/vault-storage-engine/pkg/bucket"
 	"github.com/getvaultapp/storage-engine/vault-storage-engine/pkg/config"
 	"github.com/getvaultapp/storage-engine/vault-storage-engine/pkg/datastorage"
@@ -22,6 +24,16 @@ func ListObjectsHandler(c *gin.Context) {
 	bucketID := c.Param("bucketID")
 
 	db := c.MustGet("db").(*sql.DB)
+
+	token, err := auth.GetTokenFromRequest(c)
+	if err != nil {
+		fmt.Printf("failed to get token from request, %v", err)
+	}
+
+	authVerify, err := auth.VerifyBucketOwnership(c, db, bucketID, token)
+	if !authVerify {
+		log.Fatal(err)
+	}
 
 	objects, err := bucket.ListObjects(db, bucketID)
 	if err != nil {
@@ -48,6 +60,16 @@ func UploadObjectHandler(c *gin.Context) {
 	db := c.MustGet("db").(*sql.DB)
 	cfg := c.MustGet("config").(*config.Config)
 	logger := c.MustGet("logger").(*zap.Logger)
+
+	token, err := auth.GetTokenFromRequest(c)
+	if err != nil {
+		fmt.Printf("failed to get token from request, %v", err)
+	}
+
+	authVerify, err := auth.VerifyBucketOwnership(c, db, bucketID, token)
+	if !authVerify {
+		log.Fatal(err)
+	}
 
 	// Save the uploaded file to a temporary location
 	tempFilePath := filepath.Join("/tmp", file.Filename)
@@ -94,6 +116,16 @@ func GetObjectHandler(c *gin.Context) {
 	cfg := c.MustGet("config").(*config.Config)
 	logger := c.MustGet("logger").(*zap.Logger)
 
+	token, err := auth.GetTokenFromRequest(c)
+	if err != nil {
+		fmt.Printf("failed to get token from request, %v", err)
+	}
+
+	authVerify, err := auth.VerifyBucketOwnership(c, db, bucketID, token)
+	if !authVerify {
+		log.Fatal(err)
+	}
+
 	// This should get the latest_version of the object
 	// Let's check to make sure it works correctly
 	versionID := bucket.GetLatestVersion(db, objectID)
@@ -130,6 +162,16 @@ func GetObjectByVersionHandler(c *gin.Context) {
 	db := c.MustGet("db").(*sql.DB)
 	cfg := c.MustGet("config").(*config.Config)
 	logger := c.MustGet("logger").(*zap.Logger)
+
+	token, err := auth.GetTokenFromRequest(c)
+	if err != nil {
+		fmt.Printf("failed to get token from request, %v", err)
+	}
+
+	authVerify, err := auth.VerifyBucketOwnership(c, db, bucketID, token)
+	if !authVerify {
+		log.Fatal(err)
+	}
 
 	store := sharding.NewLocalShardStore(cfg.ShardStoreBasePath)
 	data, filename, err := datastorage.RetrieveData(db, bucketID, objectID, versionID, store, cfg, logger)
@@ -171,6 +213,16 @@ func UpdateObjectVersionHandler(c *gin.Context) {
 	cfg := c.MustGet("config").(*config.Config)
 	logger := c.MustGet("logger").(*zap.Logger)
 
+	token, err := auth.GetTokenFromRequest(c)
+	if err != nil {
+		fmt.Printf("failed to get token from request, %v", err)
+	}
+
+	authVerify, err := auth.VerifyBucketOwnership(c, db, bucketID, token)
+	if !authVerify {
+		log.Fatal(err)
+	}
+
 	getfile, versionID, err := bucket.UpdateFileVersionIfItExists(db, updateRequest.Filename, bucketID, objectID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check if file exists"})
@@ -209,8 +261,18 @@ func DeleteObjectHandler(c *gin.Context) {
 	cfg := c.MustGet("config").(*config.Config)
 	logger := c.MustGet("logger").(*zap.Logger)
 
+	token, err := auth.GetTokenFromRequest(c)
+	if err != nil {
+		fmt.Printf("failed to get token from request, %v", err)
+	}
+
+	authVerify, err := auth.VerifyBucketOwnership(c, db, bucketID, token)
+	if !authVerify {
+		log.Fatal(err)
+	}
+
 	store := sharding.NewLocalShardStore(cfg.ShardStoreBasePath)
-	err := datastorage.DeleteObject(db, bucketID, objectID, store, logger)
+	err = datastorage.DeleteObject(db, bucketID, objectID, store, logger)
 	if err != nil {
 		fmt.Println(err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete object"})
@@ -230,8 +292,18 @@ func DeleteObjectByVersionHandler(c *gin.Context) {
 	cfg := c.MustGet("config").(*config.Config)
 	logger := c.MustGet("logger").(*zap.Logger)
 
+	token, err := auth.GetTokenFromRequest(c)
+	if err != nil {
+		fmt.Printf("failed to get token from request, %v", err)
+	}
+
+	authVerify, err := auth.VerifyBucketOwnership(c, db, bucketID, token)
+	if !authVerify {
+		log.Fatal(err)
+	}
+
 	store := sharding.NewLocalShardStore(cfg.ShardStoreBasePath)
-	err := datastorage.DeleteObjectByVersion(db, bucketID, objectID, versionID, store, logger)
+	err = datastorage.DeleteObjectByVersion(db, bucketID, objectID, versionID, store, logger)
 	if err != nil {
 		fmt.Println(err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete object version"})

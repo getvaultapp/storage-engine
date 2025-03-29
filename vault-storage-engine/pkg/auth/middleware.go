@@ -54,28 +54,6 @@ func JWTMiddleware() gin.HandlerFunc {
 	}
 }
 
-/* func GetUsernameFromToken(tokenString, jwtSecret string) (string, error) {
-	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-		if token.Method.Alg() != jwt.SigningMethodHS256.Alg() {
-			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
-		}
-		return []byte(jwtSecret), nil
-	})
-	if err != nil {
-		return "", fmt.Errorf("error parsing token: %v", err)
-	}
-
-	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
-		username, ok := claims["username"].(string)
-		if !ok {
-			return "", fmt.Errorf("username not found in token claims")
-		}
-		return username, nil
-	}
-
-	return "", fmt.Errorf("invalid token")
-} */
-
 // GetUsernameFromToken extracts the username from a JWT token
 func GetEmailFromToken(tokenString string) (string, error) {
 	// Parse the JWT token
