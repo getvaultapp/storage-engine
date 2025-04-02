@@ -1,12 +1,19 @@
 package utils
 
 import (
+	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/hex"
 	"fmt"
+	"io/ioutil"
 	"log"
 
 	"github.com/getvaultapp/storage-engine/vault-storage-engine/pkg/config"
 	"github.com/spf13/viper"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
 // Helper function to convert a slice to a map
@@ -42,4 +49,52 @@ func ConvertViperToConfig(v *viper.Viper) *config.Config {
 	cfg.EncryptionKey = key
 
 	return cfg
+}
+
+// LoadTLSConfig loads server and client certificates for mTLS.
+func LoadTLSConfig(certFile, keyFile, caFile string, requireClientCert bool) (*tls.Config, error) {
+	// Load server's certificate and private key
+	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
+	if err != nil {
+		return nil, err
+	}
+
+	// Load CA cert
+	caCert, err := ioutil.ReadFile(caFile)
+	if err != nil {
+		return nil, err
+	}
+	caCertPool := x509.NewCertPool()
+	caCertPool.AppendCertsFromPEM(caCert)
+
+	tlsConfig := &tls.Config{
+		Certificates: []tls.Certificate{cert},
+		RootCAs:      caCertPool,
+	}
+	if requireClientCert {
+		tlsConfig.ClientCAs = caCertPool
+		tlsConfig.ClientAuth = tls.RequireAndVerifyClientCert
+	}
+	tlsConfig.BuildNameToCertificate()
+	return tlsConfig, nil
+}
+
+// InitTracer initializes an OpenTelemetry tracer that writes to stdout.
+func InitTracer(serviceName string) func() {
+	// For demo purposes, export to stdout.
+	exporter, err := stdouttrace.New(stdouttrace.WithPrettyPrint())
+	if err != nil {
+		log.Fatalf("failed to initialize exporter: %v", err)
+	}
+
+	tp := sdktrace.NewTracerProvider(
+		sdktrace.WithBatcher(exporter),
+		sdktrace.WithResource(nil),
+	)
+	otel.SetTracerProvider(tp)
+	return func() {
+		if err := tp.Shutdown(context.Background()); err != nil {
+			log.Fatalf("Error shutting down tracer provider: %v", err)
+		}
+	}
 }

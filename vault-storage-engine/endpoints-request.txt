@@ -1,0 +1,66 @@
+Endpoints
+login
+curl -X POST http://localhost:8080/auth/login -H "Content-Type: application/json" -d '{"email":"useremail@email.com","password":"password"}'
+
+register
+curl -X POST http://localhost:8080/auth/register -H "Content-Type: application/json" -d '{"username":"newuser","email":"useremail@email.com", "password":"newpassword", "password_confirmation":"newpassword"}'
+
+list bucket
+curl -X GET http://localhost:8080/api/buckets -H "Authorization: Bearer your_jwt_token"
+
+create bucket
+curl -X POST http://localhost:8080/api/buckets -H "Authorization: Bearer your_jwt_token" -H "Content-Type: application/json" -d '{"bucket_id":"new_bucket"}'
+
+get bucket
+curl -X GET http://localhost:8080/api/buckets/bucketID -H "Authorization: Bearer your_jwt_token"
+
+delete bucket
+curl -X DELETE http://localhost:8080/api/buckets/bucketID -H "Authorization: Bearer your_jwt_token"
+
+list objects
+curl -X GET http://localhost:8080/api/objects/bucketID -H "Authorization: Bearer your_jwt_token"
+
+upload object
+curl -X POST http://localhost:8080/api/objects/bucketID -H "Authorization: Bearer your_jwt_token" -F "file=@/path/to/your/file"
+
+get object
+curl -X GET http://localhost:8080/api/objects/bucketID/objectID -H "Authorization: Bearer your_jwt_token"
+
+get object by version
+curl -X GET http://localhost:8080/api/objects/bucketID/objectID/versionID -H "Authorization: Bearer your_jwt_token"
+
+update object version
+curl -X POST http://localhost:8080/api/objects/bucketID/objectID/update -H "Authorization: Bearer your_jwt_token" -H "Content-Type: application/json" -d '{"filename":"new_version_filename"}'
+
+delete object, this deletes the latest version of an object
+curl -X DELETE http://localhost:8080/api/objects/bucketID/objectID -H "Authorization: Bearer your_jwt_token"
+
+delete object by version
+curl -X DELETE http://localhost:8080/api/objects/bucketID/objectID/versionID -H "Authorization: Bearer your_jwt_token"
+
+add permission
+curl -X POST http://localhost:8080/acl/permissions -H "Authorization: Bearer your_jwt_token" -H "Content-Type: application/json" -d '{"resource_id":"resourceID","resource_type":"bucket","user_id":"userID","permission":"read"}'
+
+list permissions
+curl -X GET http://localhost:8080/acl/permissions -H "Authorization: Bearer your_jwt_token"
+
+add object permissions
+curl -X POST http://localhost:8080/acl/permissions/objectID -H "Authorization: Bearer your_jwt_token" -H "Content-Type: application/json" -d '{"resource_id":"resourceID","resource_type":"object","user_id":"userID","permission":"read"}'
+
+create group 
+curl -X POST http://localhost:8080/acl/groups -H "Authorization: Bearer your_jwt_token" -H "Content-Type: application/json" -d '{"group_id":"groupID","name":"groupName"}'
+
+grant group access
+curl -X POST http://localhost:8080/acl/group/groupID -H "Authorization: Bearer your_jwt_token" -H "Content-Type: application/json" -d '{"resource_id":"resourceID","resource_type":"bucket","permission":"read"}'
+
+add user to group
+curl -X POST http://localhost:8080/acl/groups/groupID/users -H "Authorization: Bearer your_jwt_token" -H "Content-Type: application/json" -d '{"user_id":"userID"}'
+
+check file integrity
+curl -X GET http://localhost:8080/api/objects/bucketID/objectID/versionID/integrity -H "Authorization: Bearer your_jwt_token"
+
+get storage analytics
+curl -X GET http://localhost:8080/api/storage/analytics -H "Authorization: Bearer your_jwt_token"
+
+get storage info
+curl -X GET http://localhost:8080/api/storage/info -H "Authorization: Bearer your_jwt_token"

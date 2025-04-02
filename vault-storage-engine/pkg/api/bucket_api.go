@@ -17,6 +17,9 @@ import (
 
 // Bucket Handlers
 func ListBucketsHandler(c *gin.Context) {
+
+	// use ctx for outgping calls (how does that work?)
+
 	db := c.MustGet("db").(*sql.DB)
 
 	token, err := auth.GetTokenFromRequest(c)

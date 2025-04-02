@@ -1,0 +1,16 @@
+server_address: ":8080"
+NODE_ID: 1
+NODE_TYPE: "construction"
+shard_store_base_path: "/home/tnxl/vault-target"
+encryption_key: "61578fbc5f46463060981100f4b8a13c14e01d6d28bf75e168350f3a708eba76"
+db: "metadata.db"
+jwtSecret: "d3ad5f0c909522ce404680156fdaccd5c3ff9527dc41198a65ff1829c21ffc81"
+shardLocations:
+  - "/mnt/disk1/shards"
+  - "/mnt/disk2/shards"
+  - "/mnt/disk3/shards"
+  - "/mnt/disk4/shards"
+  - "/mnt/disk5/shards"
+  - "/mnt/disk6/shards"
+  - "/mnt/disk7/shards"
+  - "/mnt/disk8/shards"
