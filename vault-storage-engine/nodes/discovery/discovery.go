@@ -1,10 +1,11 @@
-// discovery_service/main.go
 package main
 
 import (
 	"encoding/json"
+	"hash/fnv"
 	"log"
 	"net/http"
+	"sort"
 	"sync"
 	"time"
 )
@@ -14,6 +15,7 @@ type NodeInfo struct {
 	NodeType string `json:"node_type"`
 	Address  string `json:"address"`
 	LastSeen int64  `json:"last_seen"`
+	Hash     uint32 `json:"-"`
 }
 
 var (
@@ -24,11 +26,12 @@ var (
 func main() {
 	http.HandleFunc("/register", registerHandler)
 	http.HandleFunc("/nodes", nodesHandler)
-	// Periodically clean up stale nodes.
+	http.HandleFunc("/lookup", lookupHandler) // New endpoint: lookup by key
+
 	go cleanupStaleNodes()
 
 	log.Println("Discovery service started on :8000")
-	log.Fatal(http.ListenAndServe(":8000", nil))
+	log.Fatal(http.ListenAndServeTLS(":8000", "certs/server.crt", "certs/server.key", nil))
 }
 
 func registerHandler(w http.ResponseWriter, r *http.Request) {
@@ -42,6 +45,7 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	node.LastSeen = time.Now().Unix()
+	node.Hash = hashString(node.NodeID)
 	registryLock.Lock()
 	nodeRegistry[node.NodeID] = node
 	registryLock.Unlock()
@@ -58,6 +62,48 @@ func nodesHandler(w http.ResponseWriter, r *http.Request) {
 	registryLock.RUnlock()
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(nodes)
+}
+
+// lookupHandler simulates a DHT lookup based on a provided key.
+func lookupHandler(w http.ResponseWriter, r *http.Request) {
+	key := r.URL.Query().Get("key")
+	if key == "" {
+		http.Error(w, "Missing key parameter", http.StatusBadRequest)
+		return
+	}
+	h := hashString(key)
+
+	// Collect all nodes and sort by hash distance to h.
+	registryLock.RLock()
+	var nodes []NodeInfo
+	for _, node := range nodeRegistry {
+		nodes = append(nodes, node)
+	}
+	registryLock.RUnlock()
+
+	sort.Slice(nodes, func(i, j int) bool {
+		return distance(h, nodes[i].Hash) < distance(h, nodes[j].Hash)
+	})
+	// Return the closest node.
+	if len(nodes) == 0 {
+		http.Error(w, "No nodes available", http.StatusNotFound)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(nodes[0])
+}
+
+func hashString(s string) uint32 {
+	h := fnv.New32a()
+	h.Write([]byte(s))
+	return h.Sum32()
+}
+
+func distance(a, b uint32) uint32 {
+	if a > b {
+		return a - b
+	}
+	return b - a
 }
 
 func cleanupStaleNodes() {

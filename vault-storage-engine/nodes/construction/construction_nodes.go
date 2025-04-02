@@ -18,6 +18,7 @@ import (
 	"github.com/getvaultapp/storage-engine/vault-storage-engine/pkg/utils"
 	"github.com/gorilla/mux"
 	_ "github.com/mattn/go-sqlite3"
+	"go.opentelemetry.io/otel"
 	"go.uber.org/zap"
 )
 
@@ -91,11 +92,13 @@ func main() {
 	log.Fatal(srv.ListenAndServeTLS("", ""))
 }
 
-// This should effectively propagate the tracing context
+// otelMiddleware propagates tracing context.
 func otelMiddleware(next http.Handler) http.Handler {
-	return http.HandleFunc(func(w http.ResponseWriter, r *http.Request) {
-		// We'll create new span for incoming events
-	, ctx, span := otel.Tracre("vault-construction").Start(r.Context(), r *http.Reques)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Create new span for incoming request.
+		ctx, span := otel.Tracer("vault-construction").Start(r.Context(), r.RequestURI)
+		defer span.End()
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 
