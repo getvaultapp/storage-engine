@@ -1,7 +1,8 @@
-// storage_node/main.go
+// cmd/storage_node/main.go
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -21,7 +22,6 @@ func main() {
 	if nodeID == "" || nodeType != "storage" {
 		log.Fatalf("NODE_ID must be set and NODE_TYPE must be 'storage'")
 	}
-
 	basePath := os.Getenv("SHARD_STORE_BASE_PATH")
 	if basePath == "" {
 		basePath = "./data"
@@ -30,8 +30,11 @@ func main() {
 
 	logger, err := zap.NewProduction()
 	if err != nil {
-		log.Fatalf("failed to create logger: %v", err)
+		log.Fatalf("Logger error: %v", err)
 	}
+
+	// Register with Discovery Service.
+	registerWithDiscovery(nodeID, "https://localhost:8000", fmt.Sprintf("https://localhost:%s", os.Getenv("STORAGE_PORT")))
 
 	r := mux.NewRouter()
 	r.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
@@ -46,7 +49,6 @@ func main() {
 		json.NewEncoder(w).Encode(info)
 	}).Methods("GET")
 
-	// Endpoint to store a shard
 	r.HandleFunc("/shards/{objectID}/{versionID}/{shardIdx}", func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		objectID := vars["objectID"]
@@ -64,7 +66,6 @@ func main() {
 		}
 		defer r.Body.Close()
 
-		// Use nodeID as the location for this storage node.
 		err = store.StoreShard(objectID, versionID, shardIdx, data, nodeID)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("Failed to store shard: %v", err), http.StatusInternalServerError)
@@ -74,7 +75,6 @@ func main() {
 		json.NewEncoder(w).Encode(map[string]string{"status": "success"})
 	}).Methods("PUT")
 
-	// Endpoint to retrieve a shard
 	r.HandleFunc("/shards/{objectID}/{versionID}/{shardIdx}", func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		objectID := vars["objectID"]
@@ -94,7 +94,6 @@ func main() {
 		w.Write(data)
 	}).Methods("GET")
 
-	// Endpoint to delete a shard (by version)
 	r.HandleFunc("/shards/{objectID}/{versionID}/{shardIdx}", func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		objectID := vars["objectID"]
@@ -120,4 +119,22 @@ func main() {
 	}
 	logger.Info("Starting Storage Node", zap.String("node_id", nodeID), zap.String("port", port))
 	log.Fatal(http.ListenAndServe(":"+port, r))
+}
+
+func registerWithDiscovery(nodeID, discoveryURL, selfAddress string) {
+	regURL := discoveryURL + "/register"
+	payload := map[string]string{
+		"node_id":   nodeID,
+		"node_type": "storage",
+		"address":   selfAddress,
+	}
+	data, _ := json.Marshal(payload)
+	client := &http.Client{}
+	resp, err := client.Post(regURL, "application/json", bytes.NewReader(data))
+	if err != nil {
+		log.Printf("Discovery registration failed for node %s: %v", nodeID, err)
+		return
+	}
+	defer resp.Body.Close()
+	log.Printf("Node %s registered with discovery", nodeID)
 }

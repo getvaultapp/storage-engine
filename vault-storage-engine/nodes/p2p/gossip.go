@@ -1,11 +1,17 @@
-package p2p
+package main
+
+// package p2p
 
 import (
 	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
+	"fmt"
+	"io/ioutil"
 	"log"
 	"math/rand"
 	"net/http"
+	"os"
 	"sync"
 	"time"
 
@@ -20,26 +26,26 @@ type Peer struct {
 var (
 	peerList   []Peer
 	peerLock   sync.RWMutex
-	httpClient = &http.Client{
-		Timeout: 5 * time.Second,
-	}
+	httpClient = &http.Client{Timeout: 5 * time.Second}
 )
 
-// RegisterPeer adds a peer to the local list.
 func RegisterPeer(p Peer) {
 	peerLock.Lock()
 	defer peerLock.Unlock()
+	for _, existing := range peerList {
+		if existing.NodeID == p.NodeID {
+			return
+		}
+	}
 	peerList = append(peerList, p)
 }
 
-// ListPeers returns the current list.
 func ListPeers() []Peer {
 	peerLock.RLock()
 	defer peerLock.RUnlock()
 	return peerList
 }
 
-// StartGossip periodically pulls peer info from a random peer.
 func StartGossip() {
 	go func() {
 		tracer := otel.Tracer("vault-p2p")
@@ -50,30 +56,25 @@ func StartGossip() {
 				peerLock.RUnlock()
 				continue
 			}
-			// Choose a random peer.
 			target := peerList[rand.Intn(len(peerList))]
 			peerLock.RUnlock()
 
-			// Pull their peer list.
 			url := target.Address + "/gossip/peers"
 			req, _ := http.NewRequest("GET", url, nil)
-			// Propagate tracing context.
 			ctx, span := tracer.Start(req.Context(), "GossipPull")
 			req = req.WithContext(ctx)
 			resp, err := httpClient.Do(req)
+			span.End()
 			if err != nil {
-				span.End()
 				log.Printf("Gossip pull failed from %s: %v", target.NodeID, err)
 				continue
 			}
 			var remotePeers []Peer
 			json.NewDecoder(resp.Body).Decode(&remotePeers)
 			resp.Body.Close()
-			span.End()
 
 			peerLock.Lock()
 			for _, rp := range remotePeers {
-				// Simple de-duplication.
 				found := false
 				for _, p := range peerList {
 					if p.NodeID == rp.NodeID {
@@ -81,7 +82,7 @@ func StartGossip() {
 						break
 					}
 				}
-				if !found {
+				if !found && len(peerList) < 50 {
 					peerList = append(peerList, rp)
 				}
 			}
@@ -93,7 +94,6 @@ func StartGossip() {
 	}()
 }
 
-// HTTP handlers remain the same as before.
 func GossipRegisterHandler(w http.ResponseWriter, r *http.Request) {
 	var p Peer
 	if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
@@ -109,11 +109,47 @@ func GossipListHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(ListPeers())
 }
 
-// StartGossipServer starts an HTTPS server with mTLS for gossip.
 func StartGossipServer(port string, tlsConfig *tls.Config) {
 	http.HandleFunc("/gossip/register", GossipRegisterHandler)
 	http.HandleFunc("/gossip/peers", GossipListHandler)
 	StartGossip()
 	log.Println("Gossip server started on port", port)
-	log.Fatal(http.ListenAndServeTLS(":"+port, "certs/server.crt", "certs/server.key", nil))
+	log.Fatal(http.ListenAndServeTLS(":"+port, "/home/tnxl/storage-engine/vault-storage-engine/nodes/certs/server.crt", "/home/tnxl/storage-engine/vault-storage-engine/nodes/certs/server.key", nil))
+}
+
+func main() {
+	// Load TLS Certificates
+	certPath := "/home/tnxl/storage-engine/vault-storage-engine/nodes/certs/"
+	cert, err := tls.LoadX509KeyPair(certPath+"server.crt", certPath+"server.key")
+	if err != nil {
+		log.Fatalf("Failed to load server certificates: %v", err)
+	}
+
+	caCert, err := ioutil.ReadFile(certPath + "ca.crt")
+	if err != nil {
+		log.Fatalf("Failed to load CA certificate: %v", err)
+	}
+
+	caCertPool := x509.NewCertPool()
+	caCertPool.AppendCertsFromPEM(caCert)
+
+	tlsConfig := &tls.Config{
+		Certificates: []tls.Certificate{cert},
+		ClientCAs:    caCertPool,
+		ClientAuth:   tls.RequireAndVerifyClientCert,
+	}
+
+	// Get Node ID and Port
+	nodeID := os.Getenv("NODE_ID")
+	if nodeID == "" {
+		log.Fatal("NODE_ID environment variable not set")
+	}
+	port := os.Getenv("NODE_PORT")
+	if port == "" {
+		port = "7000" // Default port
+	}
+
+	// Start Gossip Server
+	fmt.Printf("Starting Gossip node %s on port %s...\n", nodeID, port)
+	StartGossipServer(port, tlsConfig)
 }

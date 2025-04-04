@@ -26,12 +26,11 @@ var (
 func main() {
 	http.HandleFunc("/register", registerHandler)
 	http.HandleFunc("/nodes", nodesHandler)
-	http.HandleFunc("/lookup", lookupHandler) // New endpoint: lookup by key
-
+	http.HandleFunc("/lookup", lookupHandler)
 	go cleanupStaleNodes()
 
 	log.Println("Discovery service started on :8000")
-	log.Fatal(http.ListenAndServeTLS(":8000", "certs/server.crt", "certs/server.key", nil))
+	log.Fatal(http.ListenAndServeTLS(":8000", "/home/tnxl/storage-engine/vault-storage-engine/nodes/certs/server.crt", "/home/tnxl/storage-engine/vault-storage-engine/nodes/certs/server.key", nil))
 }
 
 func registerHandler(w http.ResponseWriter, r *http.Request) {
@@ -64,7 +63,6 @@ func nodesHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(nodes)
 }
 
-// lookupHandler simulates a DHT lookup based on a provided key.
 func lookupHandler(w http.ResponseWriter, r *http.Request) {
 	key := r.URL.Query().Get("key")
 	if key == "" {
@@ -72,25 +70,22 @@ func lookupHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h := hashString(key)
-
-	// Collect all nodes and sort by hash distance to h.
 	registryLock.RLock()
 	var nodes []NodeInfo
 	for _, node := range nodeRegistry {
 		nodes = append(nodes, node)
 	}
 	registryLock.RUnlock()
-
 	sort.Slice(nodes, func(i, j int) bool {
 		return distance(h, nodes[i].Hash) < distance(h, nodes[j].Hash)
 	})
-	// Return the closest node.
 	if len(nodes) == 0 {
 		http.Error(w, "No nodes available", http.StatusNotFound)
 		return
 	}
+	// Return the top 3 closest nodes.
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(nodes[0])
+	json.NewEncoder(w).Encode(nodes[:min(len(nodes), 3)])
 }
 
 func hashString(s string) uint32 {
@@ -118,4 +113,11 @@ func cleanupStaleNodes() {
 		}
 		registryLock.Unlock()
 	}
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
