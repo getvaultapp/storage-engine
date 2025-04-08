@@ -193,6 +193,7 @@ func lookupStorageNodes(key string) ([]string, error) {
 // HTTP handlers for construction node.
 // If the node is active then it is okay
 func handleHealth(w http.ResponseWriter, r *http.Request) {
+	// TODO let's get more advanced means of checking the functionality of a construction node
 	json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
 }
 
@@ -214,6 +215,7 @@ func handleProcessFile(w http.ResponseWriter, r *http.Request, db *sql.DB, store
 	}
 	defer r.Body.Close()
 
+	// Get the objectID, bucketID and filename from the request
 	objectID := r.Header.Get("X-Object-ID")
 	bucketID := r.Header.Get("X-Bucket-ID")
 	fileName := r.Header.Get("X-Filename")

@@ -26,6 +26,8 @@ type Storage interface {
 	StoreDataWithVersion(db *sql.DB, data []byte, bucketID, objectID, versionID, filePath string, store sharding.ShardStore, cfg *config.Config, locations []string, logger *zap.Logger) (string, map[string]string, []string, error)
 }
 
+// Update, we need to refactor the code for storing and retrieving data from storage nodes and sending them to construction nodes
+
 // StoreData stores an object inside a bucket
 // StoreData only works for a valid bucket, an invalid bucket would return an error
 // The files to be stored are provided an objectID and a versionID

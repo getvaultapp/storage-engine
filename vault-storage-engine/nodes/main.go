@@ -1,12 +1,12 @@
 package main
 
 import (
-	"database/sql"
 	"log"
 	"net/http"
 	"os"
 
 	"github.com/getvaultapp/storage-engine/vault-storage-engine/pkg/api"
+	"github.com/getvaultapp/storage-engine/vault-storage-engine/pkg/bucket"
 	"github.com/getvaultapp/storage-engine/vault-storage-engine/pkg/config"
 	"github.com/getvaultapp/storage-engine/vault-storage-engine/pkg/utils"
 	_ "github.com/mattn/go-sqlite3"
@@ -24,7 +24,8 @@ func main() {
 	cleanup := utils.InitTracer("vault-api")
 	defer cleanup()
 
-	db, err := sql.Open("sqlite3", "./vault.db")
+	// Initialize database
+	db, err := bucket.InitDB()
 	if err != nil {
 		logger.Fatal("DB connection error", zap.Error(err))
 	}
@@ -39,6 +40,7 @@ func main() {
 
 	port := os.Getenv("API_PORT")
 	if port == "" {
+		//port = "9000"
 		port = "9000"
 	}
 
