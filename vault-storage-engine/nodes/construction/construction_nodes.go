@@ -190,6 +190,10 @@ func lookupStorageNodes(key string) ([]string, error) {
 	return urls, nil
 }
 
+func pingPong(w http.ResponseWriter, r *http.Request) {
+	json.NewEncoder(w).Encode(map[string]string{"message": "pong"})
+}
+
 // HTTP handlers for construction node.
 // If the node is active then it is okay
 func handleHealth(w http.ResponseWriter, r *http.Request) {
@@ -246,7 +250,8 @@ func handleProcessFile(w http.ResponseWriter, r *http.Request, db *sql.DB, store
 	json.NewEncoder(w).Encode(response)
 }
 
-// This should get the shards from storage nodes
+// This should get the shards from storage nodes and work on reconstructing them
+// Sending the shards to the client back
 func handleReconstructFile(w http.ResponseWriter, r *http.Request, db *sql.DB, store sharding.ShardStore, cfg *config.Config, logger *zap.Logger, mtlsClient *http.Client) {
 	var req struct {
 		BucketID  string `json:"bucket_id"`
@@ -259,6 +264,7 @@ func handleReconstructFile(w http.ResponseWriter, r *http.Request, db *sql.DB, s
 	}
 	defer r.Body.Close()
 
+	// We would need to extract the data from the storage nodes, let's modify RetrieveData to handle that
 	data, fileName, err := datastorage.RetrieveData(db, req.BucketID, req.ObjectID, req.VersionID, store, cfg, logger)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Reconstruction failed: %v", err), http.StatusInternalServerError)
@@ -295,7 +301,7 @@ func main() {
 		},
 	}
 
-	db, err := bucket.InitDB() // Initialize your DB (e.g., SQLite)
+	db, err := bucket.InitDB()
 	if err != nil {
 		log.Fatalf("DB init error: %v", err)
 	}
@@ -309,6 +315,7 @@ func main() {
 	}
 
 	r := mux.NewRouter()
+	r.HandleFunc("/ping", pingPong).Methods("GET")
 	r.HandleFunc("/health", handleHealth).Methods("GET")
 	r.HandleFunc("/info", handleInfo).Methods("GET")
 	r.HandleFunc("/process", func(w http.ResponseWriter, r *http.Request) {

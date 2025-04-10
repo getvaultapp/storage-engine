@@ -26,6 +26,13 @@ type Storage interface {
 	StoreDataWithVersion(db *sql.DB, data []byte, bucketID, objectID, versionID, filePath string, store sharding.ShardStore, cfg *config.Config, locations []string, logger *zap.Logger) (string, map[string]string, []string, error)
 }
 
+/*
+type Storage interface {
+	StoreData :- we need to modify store data to store data to storage nodes
+	RetrieveData :- we need to modify retrieve data to get data from storage nodes
+}
+*/
+
 // Update, we need to refactor the code for storing and retrieving data from storage nodes and sending them to construction nodes
 
 // StoreData stores an object inside a bucket
