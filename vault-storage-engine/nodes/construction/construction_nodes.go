@@ -2,7 +2,6 @@
 package main
 
 import (
-	"bytes"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -14,12 +13,8 @@ import (
 	"time"
 
 	"github.com/getvaultapp/storage-engine/vault-storage-engine/pkg/bucket"
-	"github.com/getvaultapp/storage-engine/vault-storage-engine/pkg/compression"
 	"github.com/getvaultapp/storage-engine/vault-storage-engine/pkg/config"
 	"github.com/getvaultapp/storage-engine/vault-storage-engine/pkg/datastorage"
-	"github.com/getvaultapp/storage-engine/vault-storage-engine/pkg/encryption"
-	"github.com/getvaultapp/storage-engine/vault-storage-engine/pkg/erasurecoding"
-	"github.com/getvaultapp/storage-engine/vault-storage-engine/pkg/proofofinclusion"
 	"github.com/getvaultapp/storage-engine/vault-storage-engine/pkg/sharding"
 	"github.com/getvaultapp/storage-engine/vault-storage-engine/pkg/utils"
 	"github.com/google/uuid"
@@ -71,125 +66,6 @@ func claimTask(objectID string) (PendingTask, bool) {
 	return PendingTask{}, false
 }
 
-func processTask(task PendingTask, db *sql.DB, store sharding.ShardStore, cfg *config.Config, logger *zap.Logger, mtlsClient *http.Client) {
-	logger.Info("Processing task", zap.String("object_id", task.ObjectID))
-	// Process the file through compression, encryption, erasure coding, and Merkle tree generation.
-	compressedData, err := compression.Compress(task.Data)
-	if err != nil {
-		logger.Error("Compression failed", zap.Error(err))
-		return
-	}
-
-	key := cfg.EncryptionKey
-	cipherText, err := encryption.Encrypt(compressedData, key)
-	if err != nil {
-		logger.Error("Encryption failed", zap.Error(err))
-		return
-	}
-
-	shards, err := erasurecoding.Encode(cipherText)
-	if err != nil {
-		logger.Error("Erasure coding failed", zap.Error(err))
-		return
-	}
-
-	tree, err := proofofinclusion.BuildMerkleTree(shards)
-	if err != nil {
-		logger.Error("Merkle tree build failed", zap.Error(err))
-		return
-	}
-
-	// This should discover storage nodes by looking up available nodes via DHT
-	storageNodes, err := lookupStorageNodes(task.ObjectID)
-	if err != nil {
-		logger.Error("Storage node lookup failed", zap.Error(err))
-		return
-	}
-	if len(storageNodes) < len(shards) {
-		logger.Error("Not enough storage nodes available", zap.Int("required", len(shards)), zap.Int("found", len(storageNodes)))
-		return
-	}
-
-	shardLocations := make(map[string]string)
-	for idx, shard := range shards {
-		nodeURL := storageNodes[idx%len(storageNodes)]
-		uploadURL := fmt.Sprintf("%s/shards/%s/%s/%d", nodeURL, task.ObjectID, task.VersionID, idx)
-		req, err := http.NewRequest("PUT", uploadURL, bytes.NewReader(shard))
-		if err != nil {
-			logger.Error("Failed to create shard upload request", zap.Error(err))
-			return
-		}
-		req.Header.Set("Content-Type", "application/octet-stream")
-		resp, err := mtlsClient.Do(req)
-		if err != nil || resp.StatusCode != http.StatusCreated {
-			logger.Error("Failed to upload shard", zap.Int("shard", idx), zap.Error(err))
-			return
-		}
-		resp.Body.Close()
-		shardLocations[fmt.Sprintf("shard_%d", idx)] = nodeURL
-	}
-
-	// Generate proofs for each shard.
-	var proofs []string
-	for _, shard := range shards {
-		proof, err := proofofinclusion.GetProof(tree, shard)
-		if err != nil {
-			logger.Error("Failed to get proof", zap.Error(err))
-			return
-		}
-		proofs = append(proofs, proof)
-	}
-
-	// Save metadata in the database.
-	metadata := bucket.VersionMetadata{
-		BucketID:       "example-bucket", // We'll need to get the actual bucketID instead of hardcoding it
-		ObjectID:       task.ObjectID,
-		VersionID:      task.VersionID,
-		Filename:       task.FileName,
-		Filesize:       "",
-		Format:         "", // Could derive from file extension.
-		CreationDate:   time.Now().Format(time.RFC3339),
-		ShardLocations: shardLocations,
-		Proofs:         utils.ConvertSliceToMap(proofs),
-	}
-	rootVersion, _ := bucket.GetRootVersion(db, task.ObjectID)
-	err = bucket.AddVersion(db, "example-bucket", task.ObjectID, task.VersionID, rootVersion, metadata, cipherText)
-	if err != nil {
-		logger.Error("Failed to add version to DB", zap.Error(err))
-		return
-	}
-	err = bucket.AddObject(db, "example-bucket", task.ObjectID, task.FileName)
-	if err != nil {
-		logger.Error("Failed to register object in DB", zap.Error(err))
-		return
-	}
-	logger.Info("Task processed successfully", zap.String("object_id", task.ObjectID))
-}
-
-func lookupStorageNodes(key string) ([]string, error) {
-	// For local testing, query the discovery service's lookup endpoint.
-	lookupURL := fmt.Sprintf("https://localhost:8000/lookup?key=%s", key)
-	client := &http.Client{Timeout: 5 * time.Second}
-	resp, err := client.Get(lookupURL)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	var nodes []struct {
-		Address string `json:"address"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&nodes); err != nil {
-		return nil, err
-	}
-
-	var urls []string
-	for _, n := range nodes {
-		urls = append(urls, n.Address)
-	}
-	return urls, nil
-}
-
 func pingPong(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"message": "pong"})
 }
@@ -230,16 +106,43 @@ func handleProcessFile(w http.ResponseWriter, r *http.Request, db *sql.DB, store
 
 	// Generate a new version ID.
 	versionID := uuid.New().String()
+
+	// Register the task in our queue
 	registerTask(bucketID, objectID, versionID, fileName, data)
-	// Claim and process the task immediately (for local testing).
+
+	// Instead of immediately processing, we could implement a work queue
+	// But for now, let's claim and process the task immediately
 	task, ok := claimTask(objectID)
 	if !ok {
 		http.Error(w, "Task already assigned", http.StatusConflict)
 		return
 	}
 
-	// Process the task.
-	processTask(task, db, store, cfg, logger, mtlsClient)
+	// Process the task asynchronously
+	go func() {
+		// Use the new distributed storage functionality
+		_, shardLocations, _, err := datastorage.NewStoreData(
+			db,
+			task.Data,
+			task.BuucketID,
+			task.ObjectID,
+			task.FileName,
+			store,
+			cfg,
+			[]string{}, // This is not used anymore as nodes are discovered dynamically
+			logger,
+		)
+
+		if err != nil {
+			logger.Error("Failed to store data", zap.Error(err))
+			return
+		}
+
+		logger.Info("Data stored successfully",
+			zap.String("object_id", task.ObjectID),
+			zap.String("version_id", task.VersionID),
+			zap.Any("shard_locations", shardLocations))
+	}()
 
 	response := map[string]string{
 		"object_id":  objectID,
@@ -250,8 +153,6 @@ func handleProcessFile(w http.ResponseWriter, r *http.Request, db *sql.DB, store
 	json.NewEncoder(w).Encode(response)
 }
 
-// This should get the shards from storage nodes and work on reconstructing them
-// Sending the shards to the client back
 func handleReconstructFile(w http.ResponseWriter, r *http.Request, db *sql.DB, store sharding.ShardStore, cfg *config.Config, logger *zap.Logger, mtlsClient *http.Client) {
 	var req struct {
 		BucketID  string `json:"bucket_id"`
@@ -264,9 +165,19 @@ func handleReconstructFile(w http.ResponseWriter, r *http.Request, db *sql.DB, s
 	}
 	defer r.Body.Close()
 
-	// We would need to extract the data from the storage nodes, let's modify RetrieveData to handle that
-	data, fileName, err := datastorage.RetrieveData(db, req.BucketID, req.ObjectID, req.VersionID, store, cfg, logger)
+	// Use the new distributed retrieve function
+	data, fileName, err := datastorage.NewRetrieveData(
+		db,
+		req.BucketID,
+		req.ObjectID,
+		req.VersionID,
+		store,
+		cfg,
+		logger,
+	)
+
 	if err != nil {
+		logger.Error("Reconstruction failed", zap.Error(err))
 		http.Error(w, fmt.Sprintf("Reconstruction failed: %v", err), http.StatusInternalServerError)
 		return
 	}
@@ -290,7 +201,9 @@ func main() {
 	// Initialize tracing and mTLS.
 	cleanup := utils.InitTracer("vault-construction")
 	defer cleanup()
-	tlsConfig, err := utils.LoadTLSConfig("/home/tnxl/storage-engine/vault-storage-engine/nodes/certs/server.crt", "/home/tnxl/storage-engine/vault-storage-engine/nodes/certs/server.key", "/home/tnxl/storage-engine/vault-storage-engine/nodes/certs/ca.crt", true)
+	tlsConfig, err := utils.LoadTLSConfig("/home/tnxl/storage-engine/vault-storage-engine/nodes/certs/server.crt",
+		"/home/tnxl/storage-engine/vault-storage-engine/nodes/certs/server.key",
+		"/home/tnxl/storage-engine/vault-storage-engine/nodes/certs/ca.crt", true)
 	if err != nil {
 		log.Fatalf("TLS config error: %v", err)
 	}

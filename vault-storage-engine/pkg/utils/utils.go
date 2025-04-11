@@ -6,6 +6,7 @@ import (
 	"crypto/x509"
 	"encoding/hex"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 
@@ -97,4 +98,8 @@ func InitTracer(serviceName string) func() {
 			log.Fatalf("Error shutting down tracer provider: %v", err)
 		}
 	}
+}
+
+func ReadAllWithBuffer(r io.ReadCloser) ([]byte, error) {
+	return nil, nil
 }

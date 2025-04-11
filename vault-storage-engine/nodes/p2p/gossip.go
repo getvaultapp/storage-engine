@@ -3,31 +3,72 @@ package main
 // package p2p
 
 import (
+	"bytes"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"math/rand"
 	"net/http"
 	"os"
 	"sync"
+	"syscall"
 	"time"
 
 	"go.opentelemetry.io/otel"
 )
-
-type Peer struct {
-	NodeID  string `json:"node_id"`
-	Address string `json:"address"`
-}
 
 var (
 	peerList   []Peer
 	peerLock   sync.RWMutex
 	httpClient = &http.Client{Timeout: 5 * time.Second}
 )
+
+// Enhanced peer information
+type Peer struct {
+	NodeID         string            `json:"node_id"`
+	Address        string            `json:"address"`
+	NodeType       string            `json:"node_type"`
+	Capabilities   map[string]string `json:"capabilities"`
+	LastHeartbeat  time.Time         `json:"last_heartbeat"`
+	AvailableSpace int64             `json:"available_space,omitempty"` // Only for storage nodes
+}
+
+// Enhanced gossip mechanism
+func StartHealthCheck(w http.ResponseWriter, r *http.Request) {
+	go func() {
+		for {
+			time.Sleep(30 * time.Second)
+
+			// Report health to discovery service
+			nodeInfo := map[string]interface{}{
+				"node_id":   os.Getenv("NODE_ID"),
+				"node_type": os.Getenv("NODE_TYPE"),
+				"address":   fmt.Sprintf("https://localhost:%s", os.Getenv("NODE_PORT")),
+				"time":      time.Now().Format(time.RFC3339),
+			}
+
+			// If we're a storage node, include available space
+			if os.Getenv("NODE_TYPE") == "storage" {
+				var stat syscall.Statfs_t
+				basePath := os.Getenv("SHARD_STORE_BASE_PATH")
+				if basePath == "" {
+					basePath = "./data"
+				}
+
+				if err := syscall.Statfs(basePath, &stat); err == nil {
+					available := stat.Bavail * uint64(stat.Bsize)
+					nodeInfo["available_space"] = available
+				}
+			}
+
+			// Send to discovery service
+			jsonData, _ := json.Marshal(nodeInfo)
+			http.Post("https://localhost:8000/register", "application/json", bytes.NewReader(jsonData))
+		}
+	}()
+}
 
 func RegisterPeer(p Peer) {
 	peerLock.Lock()
@@ -110,6 +151,7 @@ func GossipListHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func StartGossipServer(port string, tlsConfig *tls.Config) {
+	http.HandleFunc("/gossip/health", StartHealthCheck)
 	http.HandleFunc("/gossip/register", GossipRegisterHandler)
 	http.HandleFunc("/gossip/peers", GossipListHandler)
 	StartGossip()
@@ -125,7 +167,7 @@ func main() {
 		log.Fatalf("Failed to load server certificates: %v", err)
 	}
 
-	caCert, err := ioutil.ReadFile(certPath + "ca.crt")
+	caCert, err := os.ReadFile(certPath + "ca.crt")
 	if err != nil {
 		log.Fatalf("Failed to load CA certificate: %v", err)
 	}

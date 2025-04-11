@@ -1,0 +1,26 @@
+Key Changes (UPDATE)
+1. Finding Storage Nodes:
+    Added a lookupStorageNodes function that uses the discovery service to find available storage nodes for storing shards.
+
+2. StoreData Upgrade:
+    Now compresses, encrypts, and shards data as before
+    Instead of storing locally, it distributes shards to storage nodes via HTTP requests
+    Records the node URLs in the metadata for future retrieval
+
+3. RetrieveData Upgrade:
+    Retrieves shards from storage nodes using HTTP requests based on metadata
+    Handles node failures gracefully (as long as we have enough shards)
+    Reconstructs, decrypts, and decompresses the data as before
+
+
+UPDATE CHANGES (NEXT)
+1. Error Handling and Retries:
+    Add retry logic for failures when sending/retrieving shards
+    Add timeout handling to prevent long waits when nodes are slow
+
+2. Security:
+    Implement proper mTLS for all HTTP communications
+    Add authentication for storage node access
+
+3. Load Balancing:
+    Improve the storage node selection algorithm beyond simple round-robin

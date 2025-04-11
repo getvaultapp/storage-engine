@@ -1,0 +1,118 @@
+func lookupAvailableStorageNodes(key string) ([]string, error) {
+	// For local testing, query the discovery service's lookup endpoint.
+	lookupURL := fmt.Sprintf("https://localhost:8000/lookup?key=%s", key)
+	client := &http.Client{Timeout: 5 * time.Second}
+	resp, err := client.Get(lookupURL)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	var nodes []struct {
+		Address string `json:"address"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&nodes); err != nil {
+		return nil, err
+	}
+
+	var urls []string
+	for _, n := range nodes {
+		urls = append(urls, n.Address)
+	}
+	return urls, nil
+}
+
+func processTask(task PendingTask, db *sql.DB, store sharding.ShardStore, cfg *config.Config, logger *zap.Logger, mtlsClient *http.Client) {
+	logger.Info("Processing task", zap.String("object_id", task.ObjectID))
+	// Process the file through compression, encryption, erasure coding, and Merkle tree generation.
+	compressedData, err := compression.Compress(task.Data)
+	if err != nil {
+		logger.Error("Compression failed", zap.Error(err))
+		return
+	}
+
+	key := cfg.EncryptionKey
+	cipherText, err := encryption.Encrypt(compressedData, key)
+	if err != nil {
+		logger.Error("Encryption failed", zap.Error(err))
+		return
+	}
+
+	shards, err := erasurecoding.Encode(cipherText)
+	if err != nil {
+		logger.Error("Erasure coding failed", zap.Error(err))
+		return
+	}
+
+	tree, err := proofofinclusion.BuildMerkleTree(shards)
+	if err != nil {
+		logger.Error("Merkle tree build failed", zap.Error(err))
+		return
+	}
+
+	// This should discover storage nodes by looking up available nodes via DHT
+	storageNodes, err := lookupAvailableStorageNodes(task.ObjectID)
+	if err != nil {
+		logger.Error("Storage node lookup failed", zap.Error(err))
+		return
+	}
+	if len(storageNodes) < len(shards) {
+		logger.Error("Not enough storage nodes available", zap.Int("required", len(shards)), zap.Int("found", len(storageNodes)))
+		return
+	}
+
+	shardLocations := make(map[string]string)
+	for idx, shard := range shards {
+		nodeURL := storageNodes[idx%len(storageNodes)]
+		uploadURL := fmt.Sprintf("%s/shards/%s/%s/%d", nodeURL, task.ObjectID, task.VersionID, idx)
+		req, err := http.NewRequest("PUT", uploadURL, bytes.NewReader(shard))
+		if err != nil {
+			logger.Error("Failed to create shard upload request", zap.Error(err))
+			return
+		}
+		req.Header.Set("Content-Type", "application/octet-stream")
+		resp, err := mtlsClient.Do(req)
+		if err != nil || resp.StatusCode != http.StatusCreated {
+			logger.Error("Failed to upload shard", zap.Int("shard", idx), zap.Error(err))
+			return
+		}
+		resp.Body.Close()
+		shardLocations[fmt.Sprintf("shard_%d", idx)] = nodeURL
+	}
+
+	// Generate proofs for each shard.
+	var proofs []string
+	for _, shard := range shards {
+		proof, err := proofofinclusion.GetProof(tree, shard)
+		if err != nil {
+			logger.Error("Failed to get proof", zap.Error(err))
+			return
+		}
+		proofs = append(proofs, proof)
+	}
+
+	// Save metadata in the database.
+	metadata := bucket.VersionMetadata{
+		BucketID:       "example-bucket", // We'll need to get the actual bucketID instead of hardcoding it
+		ObjectID:       task.ObjectID,
+		VersionID:      task.VersionID,
+		Filename:       task.FileName,
+		Filesize:       "",
+		Format:         "", // Could derive from file extension.
+		CreationDate:   time.Now().Format(time.RFC3339),
+		ShardLocations: shardLocations,
+		Proofs:         utils.ConvertSliceToMap(proofs),
+	}
+	rootVersion, _ := bucket.GetRootVersion(db, task.ObjectID)
+	err = bucket.AddVersion(db, "example-bucket", task.ObjectID, task.VersionID, rootVersion, metadata, cipherText)
+	if err != nil {
+		logger.Error("Failed to add version to DB", zap.Error(err))
+		return
+	}
+	err = bucket.AddObject(db, "example-bucket", task.ObjectID, task.FileName)
+	if err != nil {
+		logger.Error("Failed to register object in DB", zap.Error(err))
+		return
+	}
+	logger.Info("Task processed successfully", zap.String("object_id", task.ObjectID))
+}

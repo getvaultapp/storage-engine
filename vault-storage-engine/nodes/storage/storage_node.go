@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"syscall"
 
 	"github.com/getvaultapp/storage-engine/vault-storage-engine/pkg/sharding"
 	"github.com/gorilla/mux"
@@ -48,6 +49,10 @@ func main() {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(info)
 	}).Methods("GET")
+
+	r.HandleFunc("/diskspace", handleDiskSpace).Methods("GET")
+
+	r.HandleFunc("/shards/{objectID}/{versionID}/{shardIdx}", handleVerifyShard).Methods("GET")
 
 	r.HandleFunc("/shards/{objectID}/{versionID}/{shardIdx}", func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
@@ -137,4 +142,54 @@ func registerWithDiscovery(nodeID, discoveryURL, selfAddress string) {
 	}
 	defer resp.Body.Close()
 	log.Printf("Node %s registered with discovery", nodeID)
+}
+
+// Add health check monitoring to report available space
+func handleDiskSpace(w http.ResponseWriter, r *http.Request) {
+	basePath := os.Getenv("SHARD_STORE_BASE_PATH")
+
+	// Get available disk space on the storage node
+	var stat syscall.Statfs_t
+	err := syscall.Statfs(basePath, &stat)
+	if err != nil {
+		http.Error(w, "Failed to get disk statistics", http.StatusInternalServerError)
+		return
+	}
+
+	// Calculate available space in bytes
+	available := stat.Bavail * uint64(stat.Bsize)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"available_bytes": available,
+		"available_gb":    float64(available) / (1024 * 1024 * 1024),
+	})
+}
+
+// Add shard verification endpoint
+func handleVerifyShard(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	objectID := vars["objectID"]
+	versionID := vars["versionID"]
+	shardIdxStr := vars["shardIdx"]
+
+	nodeID := os.Getenv("NODE_ID")
+
+	shardIdx, err := strconv.Atoi(shardIdxStr)
+	if err != nil {
+		http.Error(w, "Invalid shard index", http.StatusBadRequest)
+		return
+	}
+
+	// Check if the shard exists
+	exists, err := sharding.ShardExists(objectID, versionID, shardIdx, nodeID)
+	if err != nil {
+		http.Error(w, "Error checking shard", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]bool{
+		"exists": exists,
+	})
 }
