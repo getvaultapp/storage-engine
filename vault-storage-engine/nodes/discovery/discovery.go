@@ -31,6 +31,7 @@ func main() {
 
 	log.Println("Discovery service started on :8000")
 	log.Fatal(http.ListenAndServeTLS(":8000", "/home/tnxl/storage-engine/vault-storage-engine/nodes/certs/server.crt", "/home/tnxl/storage-engine/vault-storage-engine/nodes/certs/server.key", nil))
+	//log.Fatal(http.ListenAndServe(":8000", nil))
 }
 
 func registerHandler(w http.ResponseWriter, r *http.Request) {
@@ -55,7 +56,9 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 func nodesHandler(w http.ResponseWriter, r *http.Request) {
 	registryLock.RLock()
 	nodes := make([]NodeInfo, 0, len(nodeRegistry))
+
 	for _, node := range nodeRegistry {
+		//fmt.Println(nodes)
 		nodes = append(nodes, node)
 	}
 	registryLock.RUnlock()

@@ -20,11 +20,6 @@ type LocalShardStore struct {
 	BasePath string
 }
 
-// TODO: UPDATE THIS FUNCTION PLS
-func ShardExists(objectID, versionID string, shardIdx int, nodeID string) (bool, error) {
-	return true, nil
-}
-
 // NewLocalShardStore creates a new LocalShardStore
 func NewLocalShardStore(basePath string) *LocalShardStore {
 	return &LocalShardStore{BasePath: basePath}

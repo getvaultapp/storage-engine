@@ -36,6 +36,7 @@ func main() {
 
 	// Register with Discovery Service.
 	registerWithDiscovery(nodeID, "https://localhost:8000", fmt.Sprintf("https://localhost:%s", os.Getenv("STORAGE_PORT")))
+	//registerWithDiscovery(nodeID, "http://localhost:8000", fmt.Sprintf("http://localhost:%s", os.Getenv("STORAGE_PORT")))
 
 	r := mux.NewRouter()
 	r.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
@@ -182,7 +183,7 @@ func handleVerifyShard(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the shard exists
-	exists, err := sharding.ShardExists(objectID, versionID, shardIdx, nodeID)
+	exists, err := shardExists(objectID, versionID, shardIdx, nodeID)
 	if err != nil {
 		http.Error(w, "Error checking shard", http.StatusInternalServerError)
 		return
@@ -192,4 +193,12 @@ func handleVerifyShard(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]bool{
 		"exists": exists,
 	})
+}
+
+func shardExists(objectID, versionID string, shardIdx int, nodeID string) (bool, error) {
+	//shardBase := os.Getenv("SHARD_STORE_BASE_PATH")
+	// check all files if they have the object_id, version_id prefix
+	// If it exists, then return true, if not return false
+
+	return true, nil
 }
