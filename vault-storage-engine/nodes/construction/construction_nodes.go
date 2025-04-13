@@ -2,11 +2,14 @@
 package main
 
 import (
+	"bytes"
+	"crypto/tls"
 	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log"
+	"math/rand"
 	"net/http"
 	"os"
 	"sync"
@@ -21,6 +24,157 @@ import (
 	"github.com/gorilla/mux"
 	"go.uber.org/zap"
 )
+
+// --- DISCOVERY / P2P ---
+type NodeInfo struct {
+	NodeID   string `json:"node_id"`
+	NodeType string `json:"node_type"`
+	Address  string `json:"address"`
+	LastSeen int64  `json:"last_seen"`
+	Hash     uint32 `json:"-"`
+}
+
+type Peer struct {
+	NodeID         string            `json:"node_id"`
+	Address        string            `json:"address"`
+	NodeType       string            `json:"node_type"`
+	Capabilities   map[string]string `json:"capabilities"`
+	LastHeartbeat  time.Time         `json:"last_heartbeat"`
+	AvailableSpace int64             `json:"available_space,omitempty"`
+}
+
+var (
+	nodeRegistry = make(map[string]NodeInfo)
+	registryLock sync.RWMutex
+	peerList     []Peer
+	peerLock     sync.RWMutex
+)
+
+// --- DISCOVERY / P2P: Helpers ---
+func registerHandler(w http.ResponseWriter, r *http.Request) {
+	var node NodeInfo
+	json.NewDecoder(r.Body).Decode(&node)
+	node.LastSeen = time.Now().Unix()
+	registryLock.Lock()
+	nodeRegistry[node.NodeID] = node
+	registryLock.Unlock()
+	json.NewEncoder(w).Encode(map[string]string{"status": "registered"})
+}
+
+func nodesHandler(w http.ResponseWriter, r *http.Request) {
+	registryLock.RLock()
+	var nodes []NodeInfo
+	for _, node := range nodeRegistry {
+		nodes = append(nodes, node)
+	}
+	registryLock.RUnlock()
+	json.NewEncoder(w).Encode(nodes)
+}
+
+func GossipRegisterHandler(w http.ResponseWriter, r *http.Request) {
+	var p Peer
+	if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
+		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		return
+	}
+	peerLock.Lock()
+	for _, existing := range peerList {
+		if existing.NodeID == p.NodeID {
+			peerLock.Unlock()
+			return
+		}
+	}
+	peerList = append(peerList, p)
+	peerLock.Unlock()
+	w.WriteHeader(http.StatusOK)
+}
+
+func GossipListHandler(w http.ResponseWriter, r *http.Request) {
+	peerLock.RLock()
+	json.NewEncoder(w).Encode(peerList)
+	peerLock.RUnlock()
+}
+
+func StartHealthCheck() {
+	go func() {
+		for {
+			time.Sleep(30 * time.Second)
+			nodeInfo := map[string]interface{}{
+				"node_id":   myNodeID,
+				"node_type": "construction",
+				"address":   fmt.Sprintf("https://localhost:%s", os.Getenv("CONSTRUCTION_PORT")),
+				"time":      time.Now().Format(time.RFC3339),
+			}
+			jsonData, _ := json.Marshal(nodeInfo)
+			http.Post("https://localhost:"+os.Getenv("DISCOVERY_PORT"), "application/json", bytes.NewReader(jsonData))
+		}
+	}()
+}
+
+func StartGossip() {
+	go func() {
+		for {
+			time.Sleep(10 * time.Second)
+			peerLock.RLock()
+			if len(peerList) == 0 {
+				peerLock.RUnlock()
+				continue
+			}
+			target := peerList[rand.Intn(len(peerList))]
+			peerLock.RUnlock()
+
+			url := target.Address + "/gossip/peers"
+			resp, err := http.Get(url)
+			if err != nil {
+				continue
+			}
+			var remotePeers []Peer
+			json.NewDecoder(resp.Body).Decode(&remotePeers)
+			resp.Body.Close()
+
+			peerLock.Lock()
+			for _, rp := range remotePeers {
+				found := false
+				for _, p := range peerList {
+					if p.NodeID == rp.NodeID {
+						found = true
+						break
+					}
+				}
+				if !found && len(peerList) < 50 {
+					peerList = append(peerList, rp)
+				}
+			}
+			peerLock.Unlock()
+		}
+	}()
+}
+
+func startDiscoveryAndP2P(tlsConfig *tls.Config) {
+	r := mux.NewRouter()
+	r.HandleFunc("/register", registerHandler)
+	r.HandleFunc("/nodes", nodesHandler)
+	r.HandleFunc("/gossip/register", GossipRegisterHandler)
+	r.HandleFunc("/gossip/peers", GossipListHandler)
+
+	StartHealthCheck()
+	StartGossip()
+
+	discoveryPort := os.Getenv("DISCOVERY_PORT")
+	if discoveryPort == "" {
+		discoveryPort = "9000"
+	}
+
+	go func() {
+		log.Printf("Starting discovery + gossip server on port %s...\n", discoveryPort)
+		srv := &http.Server{
+			Addr:      ":" + discoveryPort,
+			Handler:   r,
+			TLSConfig: tlsConfig,
+		}
+		log.Fatal(srv.ListenAndServeTLS("", ""))
+	}()
+}
 
 var (
 	// For simplicity, tasks are registered here.
@@ -226,6 +380,8 @@ func main() {
 	if err != nil {
 		log.Fatalf("Logger init error: %v", err)
 	}
+
+	startDiscoveryAndP2P(tlsConfig)
 
 	r := mux.NewRouter()
 	r.HandleFunc("/ping", pingPong).Methods("GET")
