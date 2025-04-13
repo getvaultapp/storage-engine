@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strconv"
 	"syscall"
 
@@ -35,8 +36,8 @@ func main() {
 	}
 
 	// Register with Discovery Service.
-	registerWithDiscovery(nodeID, "https://localhost:8000", fmt.Sprintf("https://localhost:%s", os.Getenv("STORAGE_PORT")))
-	//registerWithDiscovery(nodeID, "http://localhost:8000", fmt.Sprintf("http://localhost:%s", os.Getenv("STORAGE_PORT")))
+	//registerWithDiscovery(nodeID, "https://localhost:8000", fmt.Sprintf("https://localhost:%s", os.Getenv("STORAGE_PORT")))
+	registerWithDiscovery(nodeID, "http://localhost:8000", fmt.Sprintf("http://localhost:%s", os.Getenv("STORAGE_PORT")))
 
 	r := mux.NewRouter()
 	r.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
@@ -55,7 +56,7 @@ func main() {
 
 	r.HandleFunc("/shards/{objectID}/{versionID}/{shardIdx}", handleVerifyShard).Methods("GET")
 
-	r.HandleFunc("/shards/{objectID}/{versionID}/{shardIdx}", func(w http.ResponseWriter, r *http.Request) {
+	r.HandleFunc("/upload/{objectID}/{versionID}/{shardIdx}", func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		objectID := vars["objectID"]
 		versionID := vars["versionID"]
@@ -81,7 +82,7 @@ func main() {
 		json.NewEncoder(w).Encode(map[string]string{"status": "success"})
 	}).Methods("PUT")
 
-	r.HandleFunc("/shards/{objectID}/{versionID}/{shardIdx}", func(w http.ResponseWriter, r *http.Request) {
+	r.HandleFunc("/download/{objectID}/{versionID}/{shardIdx}", func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		objectID := vars["objectID"]
 		versionID := vars["versionID"]
@@ -186,6 +187,7 @@ func handleVerifyShard(w http.ResponseWriter, r *http.Request) {
 	exists, err := shardExists(objectID, versionID, shardIdx, nodeID)
 	if err != nil {
 		http.Error(w, "Error checking shard", http.StatusInternalServerError)
+		log.Printf("Error: %v", err)
 		return
 	}
 
@@ -196,9 +198,13 @@ func handleVerifyShard(w http.ResponseWriter, r *http.Request) {
 }
 
 func shardExists(objectID, versionID string, shardIdx int, nodeID string) (bool, error) {
-	//shardBase := os.Getenv("SHARD_STORE_BASE_PATH")
-	// check all files if they have the object_id, version_id prefix
-	// If it exists, then return true, if not return false
+	shardBase := os.Getenv("SHARD_STORE_BASE_PATH")
+	shardPath := filepath.Join(shardBase, nodeID, fmt.Sprintf("%s-v(%s)_shard_%d", objectID, versionID, shardIdx))
+	_, err := os.ReadFile(shardPath)
+	if os.IsNotExist(err) {
+		log.Printf("%s does not have the shard", nodeID)
+		return false, fmt.Errorf("file does not exists: %v", err)
+	}
 
 	return true, nil
 }

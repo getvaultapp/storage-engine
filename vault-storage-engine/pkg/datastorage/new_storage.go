@@ -124,7 +124,8 @@ func NewStoreData(db *sql.DB, data []byte, bucketID, objectID, filePath string, 
 	for idx, shard := range shards {
 		nodeURL := storageNodes[idx%len(storageNodes)] // We'll use Round-Robin distrubuition here for now
 
-		uploadURL := fmt.Sprintf("%s/shards/%s/%s/%d", nodeURL, objectID, versionID, idx)
+		// We might need to cross check the uploadURL
+		uploadURL := fmt.Sprintf("%s/upload/%s/%s/%d", nodeURL, objectID, versionID, idx)
 
 		// Costruct the upload URL for the shard data
 		req, err := http.NewRequest("PUT", uploadURL, bytes.NewReader(shard))
