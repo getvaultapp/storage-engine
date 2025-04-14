@@ -288,9 +288,9 @@ func main() {
 	}
 
 	tlsConfig, err := utils.LoadTLSConfig(
-		"/home/tnxl/storage-engine/vault-storage-engine/nodes/certs/server.crt",
-		"/home/tnxl/storage-engine/vault-storage-engine/nodes/certs/server.key",
-		"/home/tnxl/storage-engine/vault-storage-engine/nodes/certs/ca.crt",
+		"/home/tnxl/storage-engine/vault-storage-engine/certs/server.crt",
+		"/home/tnxl/storage-engine/vault-storage-engine/certs/server.key",
+		"/home/tnxl/storage-engine/vault-storage-engine/certs/ca.crt",
 		true,
 	)
 	if err != nil {

@@ -20,7 +20,7 @@ type Config struct {
 
 // LoadConfig loads the configuration from a YAML file
 func LoadConfig() *Config {
-	f, err := os.Open("config.yaml")
+	f, err := os.Open("/home/tnxl/storage-engine/vault-storage-engine/config.yaml")
 	if err != nil {
 		log.Fatalf("failed to open config file: %v", err)
 	}

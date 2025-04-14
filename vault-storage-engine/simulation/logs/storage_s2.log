@@ -1,0 +1,3 @@
+2025/04/14 13:40:34 Node s2 registered with discovery
+{"level":"info","ts":1744634434.293854,"caller":"storage/storage_node.go:303","msg":"Starting Storage Node","node_id":"s2","port":"8082"}
+2025/04/14 13:40:34 Starting embedded discovery + gossip server on port 9002...

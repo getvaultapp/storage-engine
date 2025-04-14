@@ -68,7 +68,15 @@ func LookupStorageNodes(key string, logger *zap.Logger) ([]string, error) {
 // NewStoreData stores an object by distributing it across storage nodes
 // The function compresses, encrypts, shards, and distributes data across storage nodes
 // It records metadata about shard locations and proofs in the database
-func NewStoreData(db *sql.DB, data []byte, bucketID, objectID, filePath string, store sharding.ShardStore, cfg *config.Config, locations []string, logger *zap.Logger) (string, map[string]string, []string, error) {
+func NewStoreData(
+	db *sql.DB,
+	data []byte,
+	bucketID, objectID, filePath string,
+	store sharding.ShardStore,
+	cfg *config.Config,
+	locations []string,
+	logger *zap.Logger) (string, map[string]string, []string, error) {
+
 	var bucketExists bool
 	query := `SELECT EXISTS(SELECT 1 FROM buckets WHERE bucket_id = ?)`
 	err := db.QueryRow(query, bucketID).Scan(&bucketExists)

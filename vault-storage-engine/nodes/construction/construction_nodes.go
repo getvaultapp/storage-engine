@@ -355,9 +355,9 @@ func main() {
 	// Initialize tracing and mTLS.
 	cleanup := utils.InitTracer("vault-construction")
 	defer cleanup()
-	tlsConfig, err := utils.LoadTLSConfig("/home/tnxl/storage-engine/vault-storage-engine/nodes/certs/server.crt",
-		"/home/tnxl/storage-engine/vault-storage-engine/nodes/certs/server.key",
-		"/home/tnxl/storage-engine/vault-storage-engine/nodes/certs/ca.crt", true)
+	tlsConfig, err := utils.LoadTLSConfig("/home/tnxl/storage-engine/vault-storage-engine/certs/server.crt",
+		"/home/tnxl/storage-engine/vault-storage-engine/certs/server.key",
+		"/home/tnxl/storage-engine/vault-storage-engine/certs/ca.crt", true)
 	if err != nil {
 		log.Fatalf("TLS config error: %v", err)
 	}
