@@ -65,7 +65,7 @@ func StartHealthCheck(w http.ResponseWriter, r *http.Request) {
 
 			// Send to discovery service
 			jsonData, _ := json.Marshal(nodeInfo)
-			http.Post("https://localhost:8000/register", "application/json", bytes.NewReader(jsonData))
+			http.Post("http://localhost:8000/register", "application/json", bytes.NewReader(jsonData))
 		}
 	}()
 }

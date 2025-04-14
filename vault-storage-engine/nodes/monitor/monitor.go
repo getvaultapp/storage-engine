@@ -27,7 +27,7 @@ func dashboardHandler(w http.ResponseWriter, r *http.Request) {
 
 func nodesAPIHandler(w http.ResponseWriter, r *http.Request) {
 	// Query the discovery service for all nodes
-	resp, err := http.Get("https://localhost:8000/nodes")
+	resp, err := http.Get("http://localhost:8000/nodes")
 	if err != nil {
 		http.Error(w, "Failed to get nodes", http.StatusInternalServerError)
 		return

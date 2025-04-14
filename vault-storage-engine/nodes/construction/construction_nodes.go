@@ -3,7 +3,6 @@ package main
 
 import (
 	"bytes"
-	"crypto/tls"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -102,11 +101,11 @@ func StartHealthCheck() {
 			nodeInfo := map[string]interface{}{
 				"node_id":   myNodeID,
 				"node_type": "construction",
-				"address":   fmt.Sprintf("https://localhost:%s", os.Getenv("CONSTRUCTION_PORT")),
+				"address":   fmt.Sprintf("http://localhost:%s", os.Getenv("CONSTRUCTION_PORT")),
 				"time":      time.Now().Format(time.RFC3339),
 			}
 			jsonData, _ := json.Marshal(nodeInfo)
-			http.Post("https://localhost:"+os.Getenv("DISCOVERY_PORT"), "application/json", bytes.NewReader(jsonData))
+			http.Post("http://localhost:"+os.Getenv("DISCOVERY_PORT"), "application/json", bytes.NewReader(jsonData))
 		}
 	}()
 }
@@ -150,7 +149,7 @@ func StartGossip() {
 	}()
 }
 
-func startDiscoveryAndP2P(tlsConfig *tls.Config) {
+func startDiscoveryAndP2P() {
 	r := mux.NewRouter()
 	r.HandleFunc("/register", registerHandler)
 	r.HandleFunc("/nodes", nodesHandler)
@@ -168,11 +167,11 @@ func startDiscoveryAndP2P(tlsConfig *tls.Config) {
 	go func() {
 		log.Printf("Starting discovery + gossip server on port %s...\n", discoveryPort)
 		srv := &http.Server{
-			Addr:      ":" + discoveryPort,
-			Handler:   r,
-			TLSConfig: tlsConfig,
+			Addr:    ":" + discoveryPort,
+			Handler: r,
+			//TLSConfig: tlsConfig,
 		}
-		log.Fatal(srv.ListenAndServeTLS("", ""))
+		log.Fatal(srv.ListenAndServe())
 	}()
 }
 
@@ -241,7 +240,7 @@ func handleInfo(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(info)
 }
 
-func handleProcessFile(w http.ResponseWriter, r *http.Request, db *sql.DB, store sharding.ShardStore, cfg *config.Config, logger *zap.Logger, mtlsClient *http.Client) {
+func handleProcessFile(w http.ResponseWriter, r *http.Request, db *sql.DB, store sharding.ShardStore, cfg *config.Config, logger *zap.Logger) {
 	data, err := io.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, "Failed to read file", http.StatusBadRequest)
@@ -307,10 +306,10 @@ func handleProcessFile(w http.ResponseWriter, r *http.Request, db *sql.DB, store
 	json.NewEncoder(w).Encode(response)
 }
 
-func handleDeleteFileFromStorage(w http.ResponseWriter, r *http.Request, db *sql.DB, store sharding.ShardStore, cfg *config.Config, logger *zap.Logger, mtlsClient *http.Client) {
+func handleDeleteFileFromStorage(w http.ResponseWriter, r *http.Request, db *sql.DB, store sharding.ShardStore, cfg *config.Config, logger *zap.Logger) {
 
 }
-func handleReconstructFile(w http.ResponseWriter, r *http.Request, db *sql.DB, store sharding.ShardStore, cfg *config.Config, logger *zap.Logger, mtlsClient *http.Client) {
+func handleReconstructFile(w http.ResponseWriter, r *http.Request, db *sql.DB, store sharding.ShardStore, cfg *config.Config, logger *zap.Logger) {
 	var req struct {
 		BucketID  string `json:"bucket_id"`
 		ObjectID  string `json:"object_id"`
@@ -375,18 +374,18 @@ func main() {
 	// Initialize tracing and mTLS.
 	cleanup := utils.InitTracer("vault-construction")
 	defer cleanup()
-	tlsConfig, err := utils.LoadTLSConfig("/home/tnxl/storage-engine/vault-storage-engine/certs/server.crt",
+	/*tlsConfig, err := utils.LoadTLSConfig("/home/tnxl/storage-engine/vault-storage-engine/certs/server.crt",
 		"/home/tnxl/storage-engine/vault-storage-engine/certs/server.key",
 		"/home/tnxl/storage-engine/vault-storage-engine/certs/ca.crt", true)
 	if err != nil {
 		log.Fatalf("TLS config error: %v", err)
-	}
+	} */
 
-	mtlsClient := &http.Client{
+	/* mtlsClient := &http.Client{
 		Transport: &http.Transport{
 			TLSClientConfig: tlsConfig,
 		},
-	}
+	} */
 
 	db, err := bucket.InitDB()
 	if err != nil {
@@ -401,7 +400,7 @@ func main() {
 		log.Fatalf("Logger init error: %v", err)
 	}
 
-	startDiscoveryAndP2P(tlsConfig)
+	startDiscoveryAndP2P()
 
 	r := mux.NewRouter()
 	r.HandleFunc("/ping", pingPong).Methods("GET")
@@ -409,13 +408,13 @@ func main() {
 	r.HandleFunc("/info", handleInfo).Methods("GET")
 	r.HandleFunc("/lookup", handleLookup).Methods("GET")
 	r.HandleFunc("/process", func(w http.ResponseWriter, r *http.Request) {
-		handleProcessFile(w, r, db, store, cfg, logger, mtlsClient)
+		handleProcessFile(w, r, db, store, cfg, logger)
 	}).Methods("POST")
 	r.HandleFunc("/delete", func(w http.ResponseWriter, r *http.Request) {
-		handleDeleteFileFromStorage(w, r, db, store, cfg, logger, mtlsClient)
+		handleDeleteFileFromStorage(w, r, db, store, cfg, logger)
 	}).Methods("DELETE") // This should delete a file from all storage locations
 	r.HandleFunc("/reconstruct", func(w http.ResponseWriter, r *http.Request) {
-		handleReconstructFile(w, r, db, store, cfg, logger, mtlsClient)
+		handleReconstructFile(w, r, db, store, cfg, logger)
 	}).Methods("POST")
 
 	port := os.Getenv("CONSTRUCTION_PORT")
@@ -424,11 +423,11 @@ func main() {
 	}
 
 	srv := &http.Server{
-		Addr:      ":" + port,
-		Handler:   r,
-		TLSConfig: tlsConfig,
+		Addr:    ":" + port,
+		Handler: r,
+		//TLSConfig: tlsConfig,
 	}
 
 	logger.Info("Starting Construction Node", zap.String("node_id", myNodeID), zap.String("port", port))
-	log.Fatal(srv.ListenAndServeTLS("", ""))
+	log.Fatal(srv.ListenAndServe())
 }

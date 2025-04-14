@@ -40,7 +40,7 @@ type NewStorage interface {
 func LookupStorageNodes(key string, logger *zap.Logger) ([]string, error) {
 	// Query the discovery services' lookup endpoint
 	port := os.Getenv("CONSTRUCTION_PORT")
-	lookupURL := fmt.Sprintf("https://localhost:%s/lookup?key=%s", port, key)
+	lookupURL := fmt.Sprintf("http://localhost:%s/lookup?key=%s", port, key)
 
 	client := &http.Client{
 		Timeout: 5 * time.Second,

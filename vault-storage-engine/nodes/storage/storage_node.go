@@ -3,7 +3,6 @@ package main
 
 import (
 	"bytes"
-	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -18,7 +17,6 @@ import (
 	"time"
 
 	"github.com/getvaultapp/storage-engine/vault-storage-engine/pkg/sharding"
-	"github.com/getvaultapp/storage-engine/vault-storage-engine/pkg/utils"
 	"github.com/gorilla/mux"
 	"go.uber.org/zap"
 )
@@ -105,12 +103,12 @@ func StartHealthCheck() {
 			nodeInfo := map[string]interface{}{
 				"node_id":         os.Getenv("NODE_ID"),
 				"node_type":       "storage",
-				"address":         fmt.Sprintf("https://localhost:%s", os.Getenv("STORAGE_PORT")),
+				"address":         fmt.Sprintf("http://localhost:%s", os.Getenv("STORAGE_PORT")),
 				"available_space": available,
 				"time":            time.Now().Format(time.RFC3339),
 			}
 			jsonData, _ := json.Marshal(nodeInfo)
-			http.Post("https://localhost:"+os.Getenv("STORAGE_DISCOVERY_PORT"), "application/json", bytes.NewReader(jsonData))
+			http.Post("http://localhost:"+os.Getenv("STORAGE_DISCOVERY_PORT"), "application/json", bytes.NewReader(jsonData))
 		}
 	}()
 }
@@ -154,7 +152,7 @@ func StartGossip() {
 	}()
 }
 
-func startDiscoveryAndP2P(tlsConfig *tls.Config) {
+func startDiscoveryAndP2P() {
 	r := mux.NewRouter()
 	r.HandleFunc("/register", registerHandler)
 	r.HandleFunc("/nodes", nodesHandler)
@@ -172,11 +170,11 @@ func startDiscoveryAndP2P(tlsConfig *tls.Config) {
 	go func() {
 		log.Printf("Starting embedded discovery + gossip server on port %s...\n", port)
 		srv := &http.Server{
-			Addr:      ":" + port,
-			Handler:   r,
-			TLSConfig: tlsConfig,
+			Addr:    ":" + port,
+			Handler: r,
+			//TLSConfig: tlsConfig,
 		}
-		log.Fatal(srv.ListenAndServeTLS("", ""))
+		log.Fatal(srv.ListenAndServe())
 	}()
 }
 
@@ -199,10 +197,11 @@ func main() {
 
 	// Register with Discovery Service.
 	discoveryURL := os.Getenv("DISCOVERY_URL")
+	//discoveryURL := fmt.Sprintf("")
 	if discoveryURL == "" {
 		log.Fatal("DISCOVERY_URL must be set for storage node")
 	}
-	registerWithDiscovery(nodeID, discoveryURL, fmt.Sprintf("https://localhost:%s", os.Getenv("STORAGE_PORT")))
+	registerWithDiscovery(nodeID, discoveryURL, fmt.Sprintf("http://localhost:%s", os.Getenv("STORAGE_PORT")))
 
 	r := mux.NewRouter()
 	r.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
@@ -290,18 +289,18 @@ func main() {
 		port = "8080"
 	}
 
-	tlsConfig, err := utils.LoadTLSConfig(
+	/* tlsConfig, err := utils.LoadTLSConfig(
 		"/home/tnxl/storage-engine/vault-storage-engine/certs/server.crt",
 		"/home/tnxl/storage-engine/vault-storage-engine/certs/server.key",
 		"/home/tnxl/storage-engine/vault-storage-engine/certs/ca.crt",
 		true,
-	)
-	if err != nil {
+	) */
+	/* if err != nil {
 		log.Fatalf("Failed to load TLS config: %v", err)
 	}
-
+	*/
 	// start embedded discovery and gossip
-	startDiscoveryAndP2P(tlsConfig)
+	startDiscoveryAndP2P()
 
 	logger.Info("Starting Storage Node", zap.String("node_id", nodeID), zap.String("port", port))
 	log.Fatal(http.ListenAndServe(":"+port, r))
