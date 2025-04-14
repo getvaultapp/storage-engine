@@ -198,8 +198,11 @@ func main() {
 	}
 
 	// Register with Discovery Service.
-	//registerWithDiscovery(nodeID, "https://localhost:8000", fmt.Sprintf("https://localhost:%s", os.Getenv("STORAGE_PORT")))
-	registerWithDiscovery(nodeID, "http://localhost:8000", fmt.Sprintf("http://localhost:%s", os.Getenv("STORAGE_PORT")))
+	discoveryURL := os.Getenv("DISCOVERY_URL")
+	if discoveryURL == "" {
+		log.Fatal("DISCOVERY_URL must be set for storage node")
+	}
+	registerWithDiscovery(nodeID, discoveryURL, fmt.Sprintf("https://localhost:%s", os.Getenv("STORAGE_PORT")))
 
 	r := mux.NewRouter()
 	r.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {

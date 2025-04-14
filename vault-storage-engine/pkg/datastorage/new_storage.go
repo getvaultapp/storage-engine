@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -24,9 +25,9 @@ import (
 )
 
 const (
-	maxUploadRetries = 3
+	maxUploadRetries   = 3
 	maxDownloadRetries = 3
-	baseBackoff = time.Second
+	baseBackoff        = time.Second
 )
 
 type NewStorage interface {
@@ -38,7 +39,8 @@ type NewStorage interface {
 // LookupStorageNodes uses the discovery service to find storage nodes for a given key
 func LookupStorageNodes(key string, logger *zap.Logger) ([]string, error) {
 	// Query the discovery services' lookup endpoint
-	lookupURL := fmt.Sprintf("https://localhost:8080/lookup?key=%s", key)
+	port := os.Getenv("CONSTRUCTION_PORT")
+	lookupURL := fmt.Sprintf("https://localhost:%s/lookup?key=%s", port, key)
 
 	client := &http.Client{
 		Timeout: 5 * time.Second,
@@ -138,7 +140,7 @@ func NewStoreData(
 	for idx, shard := range shards {
 		nodeURL := storageNodes[idx%len(storageNodes)]
 		uploadURL := fmt.Sprintf("%s/upload/%s/%s/%d", nodeURL, objectID, versionID, idx)
-	
+
 		var resp *http.Response
 		var err error
 		for attempt := 1; attempt <= maxUploadRetries; attempt++ {
@@ -148,7 +150,7 @@ func NewStoreData(
 					zap.Int("shard", idx), zap.Error(err))
 				break
 			}
-	
+
 			req.Header.Set("Content-Type", "application/octet-stream")
 			resp, err = httpClient.Do(req)
 			if err == nil && resp.StatusCode == http.StatusCreated {
@@ -158,23 +160,22 @@ func NewStoreData(
 			if resp != nil {
 				resp.Body.Close()
 			}
-	
+
 			logger.Warn("upload failed, retrying...",
 				zap.Int("shard", idx),
 				zap.String("node", nodeURL),
 				zap.Int("attempt", attempt),
 				zap.Error(err))
-	
+
 			time.Sleep(time.Duration(attempt) * baseBackoff)
 		}
-	
+
 		if err != nil || resp == nil || resp.StatusCode != http.StatusCreated {
 			return "", nil, nil, fmt.Errorf("failed to upload shard %d after retries: %w", idx, err)
 		}
-	
+
 		shardLocations[fmt.Sprintf("shard_%d", idx)] = nodeURL
 	}
-	
 
 	var proofs []string
 	for _, shard := range shards {
@@ -240,13 +241,13 @@ func NewRetrieveData(db *sql.DB, bucketID, objectID, versionID string, store sha
 			missing++
 			continue
 		}
-	
+
 		downloadURL := fmt.Sprintf("%s/shards/%s/%s/%d", nodeURL, objectID, versionID, shardIdx)
-	
+
 		var resp *http.Response
 		var shard []byte
 		var downloadErr error
-	
+
 		for attempt := 1; attempt <= maxDownloadRetries; attempt++ {
 			req, err := http.NewRequest("GET", downloadURL, nil)
 			if err != nil {
@@ -254,7 +255,7 @@ func NewRetrieveData(db *sql.DB, bucketID, objectID, versionID string, store sha
 					zap.Int("shard", shardIdx), zap.Error(err))
 				break
 			}
-	
+
 			resp, err = httpClient.Do(req)
 			if err != nil || resp.StatusCode != http.StatusOK {
 				if resp != nil {
@@ -268,13 +269,13 @@ func NewRetrieveData(db *sql.DB, bucketID, objectID, versionID string, store sha
 				time.Sleep(time.Duration(attempt) * baseBackoff)
 				continue
 			}
-	
+
 			shard, downloadErr = utils.ReadAllWithBuffer(resp.Body)
 			resp.Body.Close()
 			if downloadErr == nil {
 				break
 			}
-	
+
 			logger.Warn("read shard failed, retrying...",
 				zap.Int("shard", shardIdx),
 				zap.String("node", nodeURL),
@@ -282,7 +283,7 @@ func NewRetrieveData(db *sql.DB, bucketID, objectID, versionID string, store sha
 				zap.Error(downloadErr))
 			time.Sleep(time.Duration(attempt) * baseBackoff)
 		}
-	
+
 		if downloadErr != nil {
 			logger.Warn("permanent download failure",
 				zap.Int("shard", shardIdx),
@@ -291,10 +292,9 @@ func NewRetrieveData(db *sql.DB, bucketID, objectID, versionID string, store sha
 			missing++
 			continue
 		}
-	
+
 		shards[shardIdx] = shard
 	}
-	
 
 	// Check if we have enough shards to reconstruct the data
 	if missing > erasurecoding.ParityShards {
@@ -334,7 +334,7 @@ func NewRetrieveData(db *sql.DB, bucketID, objectID, versionID string, store sha
 	logger.Info("Object retrieved and reconstructed successfully",
 		zap.String("object_id", objectID),
 		zap.String("version_id", versionID))
-	
+
 	logger.Info("Shard download completed",
 		zap.Int("total_shards", totalShards),
 		zap.Int("missing", missing))
@@ -398,7 +398,7 @@ func NewStoreDataWithVersion(db *sql.DB, data []byte, bucketID, objectID, versio
 	for idx, shard := range shards {
 		nodeURL := storageNodes[idx%len(storageNodes)]
 		uploadURL := fmt.Sprintf("%s/upload/%s/%s/%d", nodeURL, objectID, versionID, idx)
-	
+
 		var resp *http.Response
 		var err error
 		for attempt := 1; attempt <= maxUploadRetries; attempt++ {
@@ -408,7 +408,7 @@ func NewStoreDataWithVersion(db *sql.DB, data []byte, bucketID, objectID, versio
 					zap.Int("shard", idx), zap.Error(err))
 				break
 			}
-	
+
 			req.Header.Set("Content-Type", "application/octet-stream")
 			resp, err = httpClient.Do(req)
 			if err == nil && resp.StatusCode == http.StatusCreated {
@@ -418,20 +418,20 @@ func NewStoreDataWithVersion(db *sql.DB, data []byte, bucketID, objectID, versio
 			if resp != nil {
 				resp.Body.Close()
 			}
-	
+
 			logger.Warn("upload failed, retrying...",
 				zap.Int("shard", idx),
 				zap.String("node", nodeURL),
 				zap.Int("attempt", attempt),
 				zap.Error(err))
-	
+
 			time.Sleep(time.Duration(attempt) * baseBackoff)
 		}
-	
+
 		if err != nil || resp == nil || resp.StatusCode != http.StatusCreated {
 			return "", nil, nil, fmt.Errorf("failed to upload shard %d after retries: %w", idx, err)
 		}
-	
+
 		shardLocations[fmt.Sprintf("shard_%d", idx)] = nodeURL
 	}
 

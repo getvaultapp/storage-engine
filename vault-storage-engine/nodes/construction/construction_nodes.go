@@ -341,6 +341,23 @@ func handleReconstructFile(w http.ResponseWriter, r *http.Request, db *sql.DB, s
 	w.Write(data)
 }
 
+func handleLookup(w http.ResponseWriter, r *http.Request) {
+	peerLock.RLock()
+	defer peerLock.RUnlock()
+
+	storageNodes := []map[string]string{}
+	for _, p := range peerList {
+		if p.NodeType == "storage" {
+			storageNodes = append(storageNodes, map[string]string{
+				"address": p.Address,
+			})
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(storageNodes)
+}
+
 func main() {
 	cfg := config.LoadConfig()
 	nodeType := os.Getenv("NODE_TYPE")
@@ -387,6 +404,7 @@ func main() {
 	r.HandleFunc("/ping", pingPong).Methods("GET")
 	r.HandleFunc("/health", handleHealth).Methods("GET")
 	r.HandleFunc("/info", handleInfo).Methods("GET")
+	r.HandleFunc("/lookup", handleLookup).Methods("GET")
 	r.HandleFunc("/process", func(w http.ResponseWriter, r *http.Request) {
 		handleProcessFile(w, r, db, store, cfg, logger, mtlsClient)
 	}).Methods("POST")
