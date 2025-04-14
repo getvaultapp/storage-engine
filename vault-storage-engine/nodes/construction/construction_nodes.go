@@ -307,6 +307,9 @@ func handleProcessFile(w http.ResponseWriter, r *http.Request, db *sql.DB, store
 	json.NewEncoder(w).Encode(response)
 }
 
+func handleDeleteFileFromStorage(w http.ResponseWriter, r *http.Request, db *sql.DB, store sharding.ShardStore, cfg *config.Config, logger *zap.Logger, mtlsClient *http.Client) {
+
+}
 func handleReconstructFile(w http.ResponseWriter, r *http.Request, db *sql.DB, store sharding.ShardStore, cfg *config.Config, logger *zap.Logger, mtlsClient *http.Client) {
 	var req struct {
 		BucketID  string `json:"bucket_id"`
@@ -408,6 +411,9 @@ func main() {
 	r.HandleFunc("/process", func(w http.ResponseWriter, r *http.Request) {
 		handleProcessFile(w, r, db, store, cfg, logger, mtlsClient)
 	}).Methods("POST")
+	r.HandleFunc("/delete", func(w http.ResponseWriter, r *http.Request) {
+		handleDeleteFileFromStorage(w, r, db, store, cfg, logger, mtlsClient)
+	}).Methods("DELETE") // This should delete a file from all storage locations
 	r.HandleFunc("/reconstruct", func(w http.ResponseWriter, r *http.Request) {
 		handleReconstructFile(w, r, db, store, cfg, logger, mtlsClient)
 	}).Methods("POST")

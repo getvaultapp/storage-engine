@@ -139,7 +139,7 @@ func NewStoreData(
 	shardLocations := make(map[string]string)
 	for idx, shard := range shards {
 		nodeURL := storageNodes[idx%len(storageNodes)]
-		uploadURL := fmt.Sprintf("%s/upload/%s/%s/%d", nodeURL, objectID, versionID, idx)
+		uploadURL := fmt.Sprintf("%s/shards/%s/%s/%d", nodeURL, objectID, versionID, idx)
 
 		var resp *http.Response
 		var err error
@@ -397,7 +397,7 @@ func NewStoreDataWithVersion(db *sql.DB, data []byte, bucketID, objectID, versio
 	shardLocations := make(map[string]string)
 	for idx, shard := range shards {
 		nodeURL := storageNodes[idx%len(storageNodes)]
-		uploadURL := fmt.Sprintf("%s/upload/%s/%s/%d", nodeURL, objectID, versionID, idx)
+		uploadURL := fmt.Sprintf("%s/shards/%s/%s/%d", nodeURL, objectID, versionID, idx)
 
 		var resp *http.Response
 		var err error
@@ -468,4 +468,12 @@ func NewStoreDataWithVersion(db *sql.DB, data []byte, bucketID, objectID, versio
 		zap.String("version_id", versionID))
 
 	return versionID, shardLocations, proofs, nil
+}
+
+// This should delete all versions of an object (file versions) from all storage locations
+func NewDeleteStorage(db *sql.DB, bucketID, objectID string, store sharding.ShardStore, logger *zap.Logger) {
+}
+
+// This should delete a particular version of an object from all storage locations
+func NewDeleteNewStorageByVersion(db *sql.DB, bucketID, objectID, versionID string, store sharding.ShardStore, logger *zap.Logger) {
 }

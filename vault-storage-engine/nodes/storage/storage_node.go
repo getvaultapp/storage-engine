@@ -219,9 +219,9 @@ func main() {
 
 	r.HandleFunc("/diskspace", handleDiskSpace).Methods("GET")
 
-	r.HandleFunc("/shards/{objectID}/{versionID}/{shardIdx}", handleVerifyShard).Methods("GET")
+	r.HandleFunc("/verify/{objectID}/{versionID}/{shardIdx}", handleVerifyShard).Methods("GET")
 
-	r.HandleFunc("/upload/{objectID}/{versionID}/{shardIdx}", func(w http.ResponseWriter, r *http.Request) {
+	r.HandleFunc("/shards/{objectID}/{versionID}/{shardIdx}", func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		objectID := vars["objectID"]
 		versionID := vars["versionID"]
@@ -247,7 +247,7 @@ func main() {
 		json.NewEncoder(w).Encode(map[string]string{"status": "success"})
 	}).Methods("PUT")
 
-	r.HandleFunc("/download/{objectID}/{versionID}/{shardIdx}", func(w http.ResponseWriter, r *http.Request) {
+	r.HandleFunc("/shards/{objectID}/{versionID}/{shardIdx}", func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		objectID := vars["objectID"]
 		versionID := vars["versionID"]
