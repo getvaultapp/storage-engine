@@ -360,6 +360,36 @@ func handleLookup(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(storageNodes)
 }
 
+func registerAllDiscoveredPeersFromRegistry() {
+	resp, err := http.Get("http://localhost:" + os.Getenv("DISCOVERY_PORT") + "/nodes")
+	if err != nil {
+		log.Printf("Failed to fetch /nodes: %v", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	var nodes []NodeInfo
+	if err := json.NewDecoder(resp.Body).Decode(&nodes); err != nil {
+		log.Printf("Failed to decode /nodes: %v", err)
+		return
+	}
+
+	for _, node := range nodes {
+		if node.NodeType != "storage" || node.NodeID == myNodeID {
+			continue
+		}
+		peer := Peer{
+			NodeID:        node.NodeID,
+			Address:       node.Address,
+			NodeType:      node.NodeType,
+			Capabilities:  map[string]string{},
+			LastHeartbeat: time.Now(),
+		}
+		data, _ := json.Marshal(peer)
+		http.Post("http://localhost:"+os.Getenv("DISCOVERY_PORT")+"/gossip/register", "application/json", bytes.NewReader(data))
+	}
+}
+
 func main() {
 	cfg := config.LoadConfig()
 	nodeType := os.Getenv("NODE_TYPE")
@@ -401,6 +431,11 @@ func main() {
 	}
 
 	startDiscoveryAndP2P()
+
+	go func() {
+		time.Sleep(2 * time.Second)
+		registerAllDiscoveredPeersFromRegistry()
+	}()
 
 	r := mux.NewRouter()
 	r.HandleFunc("/ping", pingPong).Methods("GET")
