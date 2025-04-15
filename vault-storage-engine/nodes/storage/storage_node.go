@@ -88,6 +88,37 @@ func GossipListHandler(w http.ResponseWriter, r *http.Request) {
 	peerLock.RUnlock()
 }
 
+// This is an helper function to register all nodes that are discovered
+func registerAllDiscoveredPeers(discoveryURL string) {
+	resp, err := http.Get(discoveryURL + "/nodes")
+	if err != nil {
+		log.Printf("Failed to fetch /nodes from discovery: %v", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	var nodes []NodeInfo
+	if err := json.NewDecoder(resp.Body).Decode(&nodes); err != nil {
+		log.Printf("Failed to decode /nodes: %v", err)
+		return
+	}
+
+	for _, n := range nodes {
+		if n.NodeID == os.Getenv("NODE_ID") {
+			continue // skip self
+		}
+		peer := Peer{
+			NodeID:        n.NodeID,
+			Address:       n.Address,
+			NodeType:      n.NodeType,
+			Capabilities:  map[string]string{},
+			LastHeartbeat: time.Now(),
+		}
+		data, _ := json.Marshal(peer)
+		http.Post("http://localhost:"+os.Getenv("STORAGE_DISCOVERY_PORT")+"/gossip/register", "application/json", bytes.NewReader(data))
+	}
+}
+
 func StartHealthCheck() {
 	go func() {
 		for {
@@ -195,6 +226,11 @@ func main() {
 		log.Fatalf("Logger error: %v", err)
 	}
 
+	startDiscoveryAndP2P()
+
+	// We'll give embedded server 1s to bind
+	time.Sleep(1 * time.Second)
+
 	// Register with Discovery Service.
 	discoveryURL := os.Getenv("DISCOVERY_URL")
 	//discoveryURL := fmt.Sprintf("")
@@ -202,6 +238,8 @@ func main() {
 		log.Fatal("DISCOVERY_URL must be set for storage node")
 	}
 	registerWithDiscovery(nodeID, discoveryURL, fmt.Sprintf("http://localhost:%s", os.Getenv("STORAGE_PORT")))
+
+	registerAllDiscoveredPeers(discoveryURL)
 
 	r := mux.NewRouter()
 	r.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
@@ -306,7 +344,7 @@ func main() {
 	log.Fatal(http.ListenAndServe(":"+port, r))
 }
 
-func registerWithDiscovery(nodeID, discoveryURL, selfAddress string) {
+/* func registerWithDiscovery(nodeID, discoveryURL, selfAddress string) {
 	regURL := discoveryURL + "/register"
 	payload := map[string]string{
 		"node_id":   nodeID,
@@ -318,6 +356,34 @@ func registerWithDiscovery(nodeID, discoveryURL, selfAddress string) {
 	resp, err := client.Post(regURL, "application/json", bytes.NewReader(data))
 	if err != nil {
 		log.Printf("Discovery registration failed for node %s: %v", nodeID, err)
+		return
+	}
+	defer resp.Body.Close()
+	log.Printf("Node %s registered with discovery", nodeID)
+} */
+
+func registerWithDiscovery(nodeID, discoveryURL, selfAddress string) {
+	regURL := discoveryURL + "/register"
+	payload := map[string]string{
+		"node_id":   nodeID,
+		"node_type": "storage",
+		"address":   selfAddress,
+	}
+	data, _ := json.Marshal(payload)
+	client := &http.Client{}
+
+	var resp *http.Response
+	var err error
+	for attempt := 1; attempt <= 5; attempt++ {
+		resp, err = client.Post(regURL, "application/json", bytes.NewReader(data))
+		if err == nil {
+			break
+		}
+		log.Printf("Discovery registration failed (attempt %d): %v", attempt, err)
+		time.Sleep(time.Duration(attempt) * time.Second)
+	}
+	if err != nil {
+		log.Printf("Final failure registering with discovery after retries: %v", err)
 		return
 	}
 	defer resp.Body.Close()
