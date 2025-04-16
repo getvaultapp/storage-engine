@@ -105,7 +105,7 @@ func StartHealthCheck() {
 				"time":      time.Now().Format(time.RFC3339),
 			}
 			jsonData, _ := json.Marshal(nodeInfo)
-			http.Post("http://localhost:"+os.Getenv("DISCOVERY_PORT"), "application/json", bytes.NewReader(jsonData))
+			http.Post("http://localhost:"+os.Getenv("DISCOVERY_PORT")+"/register", "application/json", bytes.NewReader(jsonData))
 		}
 	}()
 }
@@ -497,8 +497,17 @@ func main() {
 	startDiscoveryAndP2P()
 
 	go func() {
-		time.Sleep(2 * time.Second)
+		ticker := time.NewTicker(1 * time.Minute)
+		defer ticker.Stop()
+		// Run once on startup
 		registerAllDiscoveredPeersFromRegistry()
+
+		for {
+			select {
+			case <-ticker.C:
+				registerAllDiscoveredPeersFromRegistry()
+			}
+		}
 	}()
 
 	r := mux.NewRouter()

@@ -88,29 +88,33 @@ func AddObject(db *sql.DB, bucketID, objectID, filename string) error {
 	return nil
 }
 
-// AddVersion inserts a new version for an object
 func AddVersion(db *sql.DB, bucketID, objectID, versionID, rootVersion string, metadata VersionMetadata, data []byte) error {
 	metadataJSON, err := json.Marshal(metadata)
 	if err != nil {
 		return fmt.Errorf("failed to encode metadata: %w", err)
 	}
 
-	query := `INSERT INTO versions (version_id, object_id, bucket_id, root_version, metadata, data) VALUES (?, ?, ?, ?, ?, ?)`
-	_, err = db.Exec(query, versionID, objectID, bucketID, rootVersion, metadataJSON, data)
+	// Convert shard_locations map to JSON
+	shardLocBytes, err := json.Marshal(metadata.ShardLocations)
+	if err != nil {
+		return fmt.Errorf("failed to encode shard locations: %w", err)
+	}
+
+	query := `
+		INSERT INTO versions (
+			version_id, object_id, bucket_id, root_version,
+			metadata, data, shard_locations, created_at
+		)
+		VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+	`
+
+	_, err = db.Exec(query, versionID, objectID, bucketID, rootVersion, metadataJSON, data, string(shardLocBytes))
 	if err != nil {
 		return fmt.Errorf("failed to add version: %w", err)
 	}
 
+	// Update latest version
 	_, err = db.Exec(`UPDATE objects SET latest_version = ? WHERE id = ?`, versionID, objectID)
-	if err != nil {
-		return fmt.Errorf("failed to update object latest version: %w", err)
-	}
-
-	latest_version_id := GetLatestVersion(db, objectID)
-
-	// Set latest_version as current version
-	updateQuery := `UPDATE objects SET latest_version = ? WHERE id = ?`
-	_, err = db.Exec(updateQuery, latest_version_id, objectID)
 	if err != nil {
 		return fmt.Errorf("failed to update object latest version: %w", err)
 	}

@@ -68,7 +68,7 @@ func initializeSchema(db *sql.DB) error {
 		metadata TEXT NOT NULL,
 		root_version TEXT NOT NULL,
 		data BLOB NOT NULL,
-		shard_locations TEXT,
+		shard_locations BLOB,
 		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 		FOREIGN KEY (object_id) REFERENCES objects(id)
 	);

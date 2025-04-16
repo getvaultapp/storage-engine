@@ -155,7 +155,7 @@ func registerAllDiscoveredPeers(discoveryURL string) {
 			LastHeartbeat: time.Now(),
 		}
 		data, _ := json.Marshal(peer)
-		http.Post("http://localhost:"+os.Getenv("STORAGE_DISCOVERY_PORT")+"/gossip/register", "application/json", bytes.NewReader(data))
+		http.Post("http://localhost:"+os.Getenv("DISCOVERY_PORT")+"/gossip/register", "application/json", bytes.NewReader(data))
 	}
 }
 
@@ -179,7 +179,7 @@ func StartHealthCheck() {
 				"time":            time.Now().Format(time.RFC3339),
 			}
 			jsonData, _ := json.Marshal(nodeInfo)
-			http.Post("http://localhost:"+os.Getenv("STORAGE_DISCOVERY_PORT"), "application/json", bytes.NewReader(jsonData))
+			http.Post("http://localhost:"+os.Getenv("DISCOVERY_PORT")+"/register", "application/json", bytes.NewReader(jsonData))
 		}
 	}()
 }
@@ -234,7 +234,7 @@ func startDiscoveryAndP2P() {
 	StartHealthCheck()
 	StartGossip()
 
-	port := os.Getenv("STORAGE_DISCOVERY_PORT")
+	port := os.Getenv("DISCOVERY_PORT")
 	if port == "" {
 		port = "9100"
 	}
@@ -320,7 +320,7 @@ func startGarbageCollector(db *sql.DB, store sharding.ShardStore, cfg *config.Co
 			}
 
 			logger.Info("GC: completed cycle", zap.Int("deleted_versions", len(staleVersions)))
-			time.Sleep(30 * time.Minute) // tune this
+			time.Sleep(30 * time.Minute)
 		}
 	}()
 }
@@ -355,14 +355,28 @@ func main() {
 	time.Sleep(1 * time.Second)
 
 	// Register with Discovery Service.
-	discoveryURL := os.Getenv("DISCOVERY_URL")
-	//discoveryURL := fmt.Sprintf("")
+	discoveryPort := os.Getenv("DISCOVERY_PORT")
+	discoveryURL := fmt.Sprintf("http://localhost:%s", discoveryPort)
+	log.Printf("Discovery URL set to %s", discoveryURL)
 	if discoveryURL == "" {
 		log.Fatal("DISCOVERY_URL must be set for storage node")
 	}
 	registerWithDiscovery(nodeID, discoveryURL, fmt.Sprintf("http://localhost:%s", os.Getenv("STORAGE_PORT")))
 
-	registerAllDiscoveredPeers(discoveryURL)
+	go func() {
+		ticker := time.NewTicker(1 * time.Minute)
+		defer ticker.Stop()
+
+		// Run once on startup
+		registerAllDiscoveredPeers(discoveryURL)
+
+		for {
+			select {
+			case <-ticker.C:
+				registerAllDiscoveredPeers(discoveryURL)
+			}
+		}
+	}()
 
 	r := mux.NewRouter()
 	r.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
@@ -460,10 +474,11 @@ func main() {
 		log.Fatalf("Failed to load TLS config: %v", err)
 	}
 	*/
-	// start embedded discovery and gossip
-	startDiscoveryAndP2P()
 
 	startGarbageCollector(db, store, cfg, logger)
+
+	// start embedded discovery and gossip
+	startDiscoveryAndP2P()
 
 	logger.Info("Starting Storage Node", zap.String("node_id", nodeID), zap.String("port", port))
 	log.Fatal(http.ListenAndServe(":"+port, r))

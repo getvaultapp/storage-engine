@@ -54,7 +54,6 @@ func LookupStorageNodes(logger *zap.Logger) ([]string, error) {
 		log.Println("Disovery URL set to default")
 	}
 	lookupURL := fmt.Sprintf("%s/lookup", discoveryURL)
-	fmt.Println(discoveryURL)
 
 	client := &http.Client{
 		Timeout: 5 * time.Second,
@@ -62,8 +61,6 @@ func LookupStorageNodes(logger *zap.Logger) ([]string, error) {
 
 	resp, err := client.Get(lookupURL)
 
-	// For debugging
-	fmt.Println("Response ", resp)
 	if err != nil {
 		logger.Error("Failed to contact discovery service", zap.Error(err))
 		return nil, err
@@ -90,7 +87,6 @@ func LookupStorageNodes(logger *zap.Logger) ([]string, error) {
 			return nil, fmt.Errorf("discovery returned zero nodes")
 		}
 
-		fmt.Println(urls)
 		return urls, nil
 	}
 
@@ -156,7 +152,6 @@ func NewStoreData(
 
 	// Let's find available storage nodes through the discovey service instead of hardcoded location
 	storageNodes, err := LookupStorageNodes(logger)
-	fmt.Println(storageNodes)
 	if err != nil {
 		return "", nil, nil, fmt.Errorf("failed to lookup storage nodes: %w", err)
 	}
@@ -174,7 +169,9 @@ func NewStoreData(
 
 	shardLocations := make(map[string]string)
 	for idx, shard := range shards {
+		// This should get the URL of the nodes storing a particular shard
 		nodeURL := storageNodes[idx%len(storageNodes)]
+		fmt.Println(nodeURL)
 		uploadURL := fmt.Sprintf("%s/shards/%s/%s/%d", nodeURL, objectID, versionID, idx)
 
 		var resp *http.Response
@@ -243,15 +240,9 @@ func NewStoreData(
 
 	// At the end of NewStoreData:
 	locBytes, err := json.Marshal(shardLocations)
+	fmt.Printf("locbyte: %s\n", string(locBytes))
 	if err != nil {
 		return "", nil, nil, fmt.Errorf("failed to encode shard locations: %w", err)
-	}
-
-	_, err = db.Exec(`
-	INSERT INTO versions (bucket_id, object_id, version_id, shard_locations, created_at)
-	VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)`, bucketID, objectID, versionID, string(locBytes))
-	if err != nil {
-		return "", nil, nil, fmt.Errorf("failed to store version metadata: %w", err)
 	}
 
 	logger.Info("Object stored successfully across storage nodes",
@@ -428,7 +419,6 @@ func NewStoreDataWithVersion(db *sql.DB, data []byte, bucketID, objectID, versio
 
 	// Let's find available storage nodes through the discovey service instead of hardcoded location
 	storageNodes, err := LookupStorageNodes(logger)
-	fmt.Println(storageNodes)
 	if err != nil {
 		return "", nil, nil, fmt.Errorf("failed to lookup storage nodes: %w", err)
 	}
@@ -478,7 +468,7 @@ func NewStoreDataWithVersion(db *sql.DB, data []byte, bucketID, objectID, versio
 			time.Sleep(time.Duration(attempt) * baseBackoff)
 		}
 
-		if err != nil || resp == nil || resp.StatusCode != http.StatusCreated {
+		if resp == nil || resp.StatusCode != http.StatusCreated {
 			return "", nil, nil, fmt.Errorf("failed to upload shard %d after retries: %w", idx, err)
 		}
 
@@ -513,17 +503,12 @@ func NewStoreDataWithVersion(db *sql.DB, data []byte, bucketID, objectID, versio
 		return "", nil, nil, fmt.Errorf("failed to register object in bucket: %w", err)
 	}
 
-	// At the end of NewStoreData:
 	locBytes, err := json.Marshal(shardLocations)
+
+	// This is for deugging
+	fmt.Printf("locByte %s", locBytes)
 	if err != nil {
 		return "", nil, nil, fmt.Errorf("failed to encode shard locations: %w", err)
-	}
-
-	_, err = db.Exec(`
-	INSERT INTO versions (bucket_id, object_id, version_id, shard_locations, created_at)
-	VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)`, bucketID, objectID, versionID, string(locBytes))
-	if err != nil {
-		return "", nil, nil, fmt.Errorf("failed to store version metadata: %w", err)
 	}
 
 	logger.Info("Object stored successfully across storage nodes",
@@ -590,4 +575,46 @@ func DeleteVersionShardsAcrossNodes(
 		resp.Body.Close()
 	}
 	return nil
+}
+
+// This adds property for partial override
+// To get the new location we would rerun the lookup and updae the locations on the database
+func UpdateShardLocations(cfg *config.Config, bucketID, objectID, versionID string, newLocations map[string]string) error {
+	db, err := bucket.InitDB()
+	if err != nil {
+		log.Println("Failed to initialize the database")
+	}
+	if err != nil {
+		return fmt.Errorf("failed to open DB: %w", err)
+	}
+	defer db.Close()
+
+	// Get existing shard_locations
+	var raw string
+	err = db.QueryRow(`
+		SELECT shard_locations FROM versions
+		WHERE bucket_id = ? AND object_id = ? AND version_id = ?
+	`, bucketID, objectID, versionID).Scan(&raw)
+	if err != nil {
+		return err
+	}
+
+	var current map[string]string
+	if err := json.Unmarshal([]byte(raw), &current); err != nil {
+		return err
+	}
+
+	// Merge maps
+	for k, v := range newLocations {
+		current[k] = v
+	}
+
+	merged, _ := json.Marshal(current)
+	_, err = db.Exec(`
+		UPDATE versions
+		SET shard_locations = ?
+		WHERE bucket_id = ? AND object_id = ? AND version_id = ?
+	`, string(merged), bucketID, objectID, versionID)
+
+	return err
 }
