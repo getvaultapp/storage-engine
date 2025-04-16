@@ -3,6 +3,7 @@ package main
 
 import (
 	"bytes"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -16,6 +17,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/getvaultapp/storage-engine/vault-storage-engine/pkg/bucket"
+	"github.com/getvaultapp/storage-engine/vault-storage-engine/pkg/config"
 	"github.com/getvaultapp/storage-engine/vault-storage-engine/pkg/sharding"
 	"github.com/gorilla/mux"
 	"go.uber.org/zap"
@@ -246,7 +249,86 @@ func startDiscoveryAndP2P() {
 	}()
 }
 
+func startGarbageCollector(db *sql.DB, store sharding.ShardStore, cfg *config.Config, logger *zap.Logger) {
+	go func() {
+		for {
+			logger.Info("Running garbage collection...")
+
+			rows, err := db.Query(`
+				SELECT bucket_id, object_id, version_id, created_at 
+				FROM versions
+			`)
+			if err != nil {
+				logger.Error("GC: failed to query versions", zap.Error(err))
+				time.Sleep(10 * time.Minute)
+				continue
+			}
+
+			var staleVersions []struct {
+				BucketID  string
+				ObjectID  string
+				VersionID string
+				CreatedAt time.Time
+			}
+
+			now := time.Now()
+			for rows.Next() {
+				var bucketID, objectID, versionID string
+				var createdAt time.Time
+				if err := rows.Scan(&bucketID, &objectID, &versionID, &createdAt); err != nil {
+					logger.Error("GC: row scan error", zap.Error(err))
+					continue
+				}
+				// Mark versions older than 2 hours as stale
+				if now.Sub(createdAt) > 2*time.Hour {
+					staleVersions = append(staleVersions, struct {
+						BucketID  string
+						ObjectID  string
+						VersionID string
+						CreatedAt time.Time
+					}{
+						BucketID:  bucketID,
+						ObjectID:  objectID,
+						VersionID: versionID,
+						CreatedAt: createdAt,
+					})
+				}
+			}
+			rows.Close()
+
+			for _, v := range staleVersions {
+				logger.Info("GC: deleting stale version",
+					zap.String("object_id", v.ObjectID),
+					zap.String("version_id", v.VersionID))
+
+				// Trigger deletion logic
+				err := datastorage.DeleteVersionShardsAcrossNodes(
+					v.BucketID, v.ObjectID, v.VersionID, store, cfg, logger,
+				)
+				if err != nil {
+					logger.Warn("GC: failed to delete shards", zap.Error(err))
+					continue
+				}
+
+				// Delete DB entry
+				_, err = db.Exec(`DELETE FROM versions WHERE bucket_id = ? AND object_id = ? AND version_id = ?`,
+					v.BucketID, v.ObjectID, v.VersionID)
+				if err != nil {
+					logger.Warn("GC: failed to delete version from DB", zap.Error(err))
+				}
+			}
+
+			logger.Info("GC: completed cycle", zap.Int("deleted_versions", len(staleVersions)))
+			time.Sleep(30 * time.Minute) // tune this
+		}
+	}()
+}
+
 func main() {
+	db, err := bucket.InitDB()
+	if err != nil {
+		log.Println("Failed to init database")
+	}
 	nodeID := os.Getenv("NODE_ID")
 	nodeType := os.Getenv("NODE_TYPE")
 	if nodeID == "" || nodeType != "storage" {
@@ -376,6 +458,8 @@ func main() {
 	*/
 	// start embedded discovery and gossip
 	startDiscoveryAndP2P()
+
+	startGarbageCollector(db, store, cfg, logger)
 
 	logger.Info("Starting Storage Node", zap.String("node_id", nodeID), zap.String("port", port))
 	log.Fatal(http.ListenAndServe(":"+port, r))
