@@ -64,6 +64,42 @@ func nodesHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(nodes)
 }
 
+// This should work along with the discovery, not the construction port
+func handleLookup(w http.ResponseWriter, r *http.Request) {
+	storageNodes := []map[string]string{}
+
+	peerLock.RLock()
+	for _, p := range peerList {
+		if p.NodeType == "storage" {
+			storageNodes = append(storageNodes, map[string]string{
+				"address": p.Address,
+			})
+		}
+	}
+	peerLock.RUnlock()
+
+	// Fallback to nodeRegistry if peerList is empty
+	if len(storageNodes) == 0 {
+		registryLock.RLock()
+		for _, n := range nodeRegistry {
+			if n.NodeType == "storage" {
+				storageNodes = append(storageNodes, map[string]string{
+					"address": n.Address,
+				})
+			}
+		}
+		registryLock.RUnlock()
+	}
+
+	if len(storageNodes) == 0 {
+		http.Error(w, "no storage nodes available", http.StatusServiceUnavailable)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(storageNodes)
+}
+
 func GossipRegisterHandler(w http.ResponseWriter, r *http.Request) {
 	var p Peer
 	if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
@@ -189,6 +225,7 @@ func startDiscoveryAndP2P() {
 	r.HandleFunc("/nodes", nodesHandler)
 	r.HandleFunc("/gossip/register", GossipRegisterHandler)
 	r.HandleFunc("/gossip/peers", GossipListHandler)
+	r.HandleFunc("/lookup", handleLookup).Methods("GET")
 
 	StartHealthCheck()
 	StartGossip()
@@ -343,24 +380,6 @@ func main() {
 	logger.Info("Starting Storage Node", zap.String("node_id", nodeID), zap.String("port", port))
 	log.Fatal(http.ListenAndServe(":"+port, r))
 }
-
-/* func registerWithDiscovery(nodeID, discoveryURL, selfAddress string) {
-	regURL := discoveryURL + "/register"
-	payload := map[string]string{
-		"node_id":   nodeID,
-		"node_type": "storage",
-		"address":   selfAddress,
-	}
-	data, _ := json.Marshal(payload)
-	client := &http.Client{}
-	resp, err := client.Post(regURL, "application/json", bytes.NewReader(data))
-	if err != nil {
-		log.Printf("Discovery registration failed for node %s: %v", nodeID, err)
-		return
-	}
-	defer resp.Body.Close()
-	log.Printf("Node %s registered with discovery", nodeID)
-} */
 
 func registerWithDiscovery(nodeID, discoveryURL, selfAddress string) {
 	regURL := discoveryURL + "/register"

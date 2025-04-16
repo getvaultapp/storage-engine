@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"io"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -37,40 +39,66 @@ type NewStorage interface {
 }
 
 // LookupStorageNodes uses the discovery service to find storage nodes for a given key
-func LookupStorageNodes(key string, logger *zap.Logger) ([]string, error) {
-	// Query the discovery services' lookup endpoint
-	port := os.Getenv("CONSTRUCTION_PORT")
-	lookupURL := fmt.Sprintf("http://localhost:%s/lookup?key=%s", port, key)
+func LookupStorageNodes(logger *zap.Logger) ([]string, error) {
+	discoveryPort := os.Getenv("DISCOVERY_PORT")
+	discoveryURL := fmt.Sprintf("http://localhost:%s", discoveryPort)
+	if discoveryURL == "" {
+		discoveryURL = "http://localhost:9000" // fallback
+		log.Println("Disovery URL set to default")
+	}
+	lookupURL := fmt.Sprintf("%s/lookup", discoveryURL)
+	fmt.Println(discoveryURL)
 
 	client := &http.Client{
 		Timeout: 5 * time.Second,
 	}
 
 	resp, err := client.Get(lookupURL)
+
+	// For debugging
+	fmt.Println("Response ", resp)
 	if err != nil {
-		logger.Error("Failed to lookup storage nodes", zap.Error(err))
+		logger.Error("Failed to contact discovery service", zap.Error(err))
 		return nil, err
 	}
 	defer resp.Body.Close()
 
-	var nodes []struct {
-		Address string `json:"address"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&nodes); err != nil {
-		logger.Error("Failed to decode the storage node responses", zap.Error(err))
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		logger.Error("Failed to read discovery response body", zap.Error(err))
 		return nil, err
 	}
 
-	var urls []string
-	for _, n := range nodes {
-		urls = append(urls, n.Address)
+	logger.Debug("Raw discovery response", zap.ByteString("body", body))
+
+	var objectNodes []struct {
+		Address string `json:"address"`
+	}
+	if err := json.Unmarshal(body, &objectNodes); err == nil {
+		var urls []string
+		for _, node := range objectNodes {
+			urls = append(urls, node.Address)
+		}
+		if len(urls) == 0 {
+			return nil, fmt.Errorf("discovery returned zero nodes")
+		}
+
+		fmt.Println(urls)
+		return urls, nil
 	}
 
-	if len(urls) == 0 {
-		return nil, fmt.Errorf("no storage nodes available")
+	// Fallback: try decoding as array of raw strings
+	var stringNodes []string
+	if err := json.Unmarshal(body, &stringNodes); err == nil {
+		if len(stringNodes) == 0 {
+			return nil, fmt.Errorf("discovery returned zero node addresses")
+		}
+		return stringNodes, nil
 	}
 
-	return urls, nil
+	// If both failed
+	logger.Error("Failed to parse discovery response", zap.ByteString("body", body))
+	return nil, fmt.Errorf("invalid format in discovery response")
 }
 
 // NewStoreData stores an object by distributing it across storage nodes
@@ -120,7 +148,8 @@ func NewStoreData(
 	}
 
 	// Let's find available storage nodes through the discovey service instead of hardcoded location
-	storageNodes, err := LookupStorageNodes(objectID, logger)
+	storageNodes, err := LookupStorageNodes(logger)
+	fmt.Println(storageNodes)
 	if err != nil {
 		return "", nil, nil, fmt.Errorf("failed to lookup storage nodes: %w", err)
 	}
@@ -378,7 +407,8 @@ func NewStoreDataWithVersion(db *sql.DB, data []byte, bucketID, objectID, versio
 	}
 
 	// Let's find available storage nodes through the discovey service instead of hardcoded location
-	storageNodes, err := LookupStorageNodes(objectID, logger)
+	storageNodes, err := LookupStorageNodes(logger)
+	fmt.Println(storageNodes)
 	if err != nil {
 		return "", nil, nil, fmt.Errorf("failed to lookup storage nodes: %w", err)
 	}

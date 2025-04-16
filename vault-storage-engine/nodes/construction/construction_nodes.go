@@ -155,6 +155,7 @@ func startDiscoveryAndP2P() {
 	r.HandleFunc("/nodes", nodesHandler)
 	r.HandleFunc("/gossip/register", GossipRegisterHandler)
 	r.HandleFunc("/gossip/peers", GossipListHandler)
+	r.HandleFunc("/lookup", handleLookup)
 
 	StartHealthCheck()
 	StartGossip()
@@ -162,6 +163,7 @@ func startDiscoveryAndP2P() {
 	discoveryPort := os.Getenv("DISCOVERY_PORT")
 	if discoveryPort == "" {
 		discoveryPort = "9000"
+		log.Println("Discovery Port Set To Default")
 	}
 
 	go func() {
@@ -176,7 +178,6 @@ func startDiscoveryAndP2P() {
 }
 
 var (
-	// For simplicity, tasks are registered here.
 	taskQueue   = make(map[string]PendingTask)
 	taskQueueMu sync.Mutex
 	myNodeID    = os.Getenv("NODE_ID")
@@ -317,6 +318,7 @@ func handleReconstructFile(w http.ResponseWriter, r *http.Request, db *sql.DB, s
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		log.Printf("%v", err)
 		return
 	}
 	defer r.Body.Close()
@@ -343,17 +345,36 @@ func handleReconstructFile(w http.ResponseWriter, r *http.Request, db *sql.DB, s
 	w.Write(data)
 }
 
+// This should work along with the discovery, not the construction port
 func handleLookup(w http.ResponseWriter, r *http.Request) {
-	peerLock.RLock()
-	defer peerLock.RUnlock()
-
 	storageNodes := []map[string]string{}
+
+	peerLock.RLock()
 	for _, p := range peerList {
 		if p.NodeType == "storage" {
 			storageNodes = append(storageNodes, map[string]string{
 				"address": p.Address,
 			})
 		}
+	}
+	peerLock.RUnlock()
+
+	// Fallback to nodeRegistry if peerList is empty
+	if len(storageNodes) == 0 {
+		registryLock.RLock()
+		for _, n := range nodeRegistry {
+			if n.NodeType == "storage" {
+				storageNodes = append(storageNodes, map[string]string{
+					"address": n.Address,
+				})
+			}
+		}
+		registryLock.RUnlock()
+	}
+
+	if len(storageNodes) == 0 {
+		http.Error(w, "no storage nodes available", http.StatusServiceUnavailable)
+		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
