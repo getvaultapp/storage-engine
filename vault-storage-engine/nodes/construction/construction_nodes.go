@@ -307,9 +307,52 @@ func handleProcessFile(w http.ResponseWriter, r *http.Request, db *sql.DB, store
 	json.NewEncoder(w).Encode(response)
 }
 
+// This should correctly list all versions of the object_id and bucket_id from the console of the construction node
+func handleListVersions(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+	bucketID := r.URL.Query().Get("bucket_id")
+	objectID := r.URL.Query().Get("object_id")
+
+	if bucketID == "" || objectID == "" {
+		http.Error(w, "Missing bucket_id or object_id", http.StatusBadRequest)
+		return
+	}
+
+	rows, err := db.Query(`
+		SELECT version_id, created_at, shard_locations
+		FROM versions
+		WHERE bucket_id = ? AND object_id = ?
+		ORDER BY created_at DESC
+	`, bucketID, objectID)
+	if err != nil {
+		http.Error(w, "DB error", http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	var versions []map[string]interface{}
+	for rows.Next() {
+		var versionID, createdAt, shardLocations string
+		if err := rows.Scan(&versionID, &createdAt, &shardLocations); err != nil {
+			continue
+		}
+		var loc map[string]string
+		_ = json.Unmarshal([]byte(shardLocations), &loc)
+
+		versions = append(versions, map[string]interface{}{
+			"version_id":      versionID,
+			"created_at":      createdAt,
+			"shard_locations": loc,
+		})
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(versions)
+}
+
 func handleDeleteFileFromStorage(w http.ResponseWriter, r *http.Request, db *sql.DB, store sharding.ShardStore, cfg *config.Config, logger *zap.Logger) {
 
 }
+
 func handleReconstructFile(w http.ResponseWriter, r *http.Request, db *sql.DB, store sharding.ShardStore, cfg *config.Config, logger *zap.Logger) {
 	var req struct {
 		BucketID  string `json:"bucket_id"`
@@ -472,6 +515,9 @@ func main() {
 	r.HandleFunc("/reconstruct", func(w http.ResponseWriter, r *http.Request) {
 		handleReconstructFile(w, r, db, store, cfg, logger)
 	}).Methods("POST")
+	r.HandleFunc("/versions", func(w http.ResponseWriter, r *http.Request) {
+		handleListVersions(w, r, db)
+	}).Methods("GET")
 
 	port := os.Getenv("CONSTRUCTION_PORT")
 	if port == "" {

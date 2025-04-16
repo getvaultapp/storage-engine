@@ -38,6 +38,13 @@ type NewStorage interface {
 	NewStoreDataWithVersion(db *sql.DB, data []byte, bucketID, objectID, versionID, filePath string, store sharding.ShardStore, cfg *config.Config, locations []string, logger *zap.Logger) (string, map[string]string, []string, error)
 }
 
+type ShardMetadata struct {
+	BucketID       string
+	ObjectID       string
+	VersionID      string
+	ShardLocations map[string]string
+}
+
 // LookupStorageNodes uses the discovery service to find storage nodes for a given key
 func LookupStorageNodes(logger *zap.Logger) ([]string, error) {
 	discoveryPort := os.Getenv("DISCOVERY_PORT")
@@ -199,7 +206,7 @@ func NewStoreData(
 			time.Sleep(time.Duration(attempt) * baseBackoff)
 		}
 
-		if err != nil || resp == nil || resp.StatusCode != http.StatusCreated {
+		if resp == nil || resp.StatusCode != http.StatusCreated {
 			return "", nil, nil, fmt.Errorf("failed to upload shard %d after retries: %w", idx, err)
 		}
 
@@ -232,6 +239,19 @@ func NewStoreData(
 	err = bucket.AddVersion(db, bucketID, objectID, versionID, root_version, metadata, cipherText)
 	if err != nil {
 		return "", nil, nil, fmt.Errorf("failed to register object in bucket: %w", err)
+	}
+
+	// At the end of NewStoreData:
+	locBytes, err := json.Marshal(shardLocations)
+	if err != nil {
+		return "", nil, nil, fmt.Errorf("failed to encode shard locations: %w", err)
+	}
+
+	_, err = db.Exec(`
+	INSERT INTO versions (bucket_id, object_id, version_id, shard_locations, created_at)
+	VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)`, bucketID, objectID, versionID, string(locBytes))
+	if err != nil {
+		return "", nil, nil, fmt.Errorf("failed to store version metadata: %w", err)
 	}
 
 	logger.Info("Object stored successfully across storage nodes",
@@ -493,6 +513,19 @@ func NewStoreDataWithVersion(db *sql.DB, data []byte, bucketID, objectID, versio
 		return "", nil, nil, fmt.Errorf("failed to register object in bucket: %w", err)
 	}
 
+	// At the end of NewStoreData:
+	locBytes, err := json.Marshal(shardLocations)
+	if err != nil {
+		return "", nil, nil, fmt.Errorf("failed to encode shard locations: %w", err)
+	}
+
+	_, err = db.Exec(`
+	INSERT INTO versions (bucket_id, object_id, version_id, shard_locations, created_at)
+	VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)`, bucketID, objectID, versionID, string(locBytes))
+	if err != nil {
+		return "", nil, nil, fmt.Errorf("failed to store version metadata: %w", err)
+	}
+
 	logger.Info("Object stored successfully across storage nodes",
 		zap.String("object_id", objectID),
 		zap.String("version_id", versionID))
@@ -500,10 +533,61 @@ func NewStoreDataWithVersion(db *sql.DB, data []byte, bucketID, objectID, versio
 	return versionID, shardLocations, proofs, nil
 }
 
-// This should delete all versions of an object (file versions) from all storage locations
-func NewDeleteStorage(db *sql.DB, bucketID, objectID string, store sharding.ShardStore, logger *zap.Logger) {
+func GetShardMetadata(cfg *config.Config, bucketID, objectID, versionID string) (*ShardMetadata, error) {
+	db, err := bucket.InitDB()
+	if err != nil {
+		log.Println("Failed to initialize database")
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to open DB: %w", err)
+	}
+	defer db.Close()
+
+	var rawLocations string
+	query := `SELECT shard_locations FROM versions WHERE bucket_id = ? AND object_id = ? AND version_id = ?`
+	err = db.QueryRow(query, bucketID, objectID, versionID).Scan(&rawLocations)
+	if err == sql.ErrNoRows {
+		return nil, fmt.Errorf("no metadata found for %s/%s version %s", bucketID, objectID, versionID)
+	} else if err != nil {
+		return nil, fmt.Errorf("failed to query metadata: %w", err)
+	}
+
+	var locations map[string]string
+	if err := json.Unmarshal([]byte(rawLocations), &locations); err != nil {
+		return nil, fmt.Errorf("failed to decode shard_locations: %w", err)
+	}
+
+	return &ShardMetadata{
+		BucketID:       bucketID,
+		ObjectID:       objectID,
+		VersionID:      versionID,
+		ShardLocations: locations,
+	}, nil
 }
 
-// This should delete a particular version of an object from all storage locations
-func NewDeleteNewStorageByVersion(db *sql.DB, bucketID, objectID, versionID string, store sharding.ShardStore, logger *zap.Logger) {
+func DeleteVersionShardsAcrossNodes(
+	bucketID, objectID, versionID string,
+	store sharding.ShardStore,
+	cfg *config.Config,
+	logger *zap.Logger,
+) error {
+	// We'll lookup the metadata across all shard locations
+	metadata, err := GetShardMetadata(cfg, bucketID, objectID, versionID)
+	if err != nil {
+		return fmt.Errorf("metadata lookup failed: %w", err)
+	}
+
+	// Iterate over each shard location
+	for shardKey, nodeURL := range metadata.ShardLocations {
+		url := fmt.Sprintf("%s/shards/%s/%s/%s", nodeURL, objectID, versionID, shardKey[len("shard_"):])
+		req, _ := http.NewRequest("DELETE", url, nil)
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			logger.Warn("GC: failed to contact storage node", zap.String("url", url), zap.Error(err))
+			continue
+		}
+		resp.Body.Close()
+	}
+	return nil
 }

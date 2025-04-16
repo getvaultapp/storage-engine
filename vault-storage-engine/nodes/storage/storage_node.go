@@ -19,6 +19,7 @@ import (
 
 	"github.com/getvaultapp/storage-engine/vault-storage-engine/pkg/bucket"
 	"github.com/getvaultapp/storage-engine/vault-storage-engine/pkg/config"
+	"github.com/getvaultapp/storage-engine/vault-storage-engine/pkg/datastorage"
 	"github.com/getvaultapp/storage-engine/vault-storage-engine/pkg/sharding"
 	"github.com/gorilla/mux"
 	"go.uber.org/zap"
@@ -329,6 +330,9 @@ func main() {
 	if err != nil {
 		log.Println("Failed to init database")
 	}
+
+	cfg := config.LoadConfig()
+
 	nodeID := os.Getenv("NODE_ID")
 	nodeType := os.Getenv("NODE_TYPE")
 	if nodeID == "" || nodeType != "storage" {
